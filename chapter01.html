@@ -1,539 +1,876 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World - Clicker Chapter</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chapter 1: Hello World</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-            color: #333;
-            overflow: hidden; /* Prevents scrollbars from toasts appearing briefly */
-        }
+      :root {
+        --bg-color: #f0f0f0;
+        --text-color: #333;
+        --panel-bg: #e0e0e0;
+        --button-bg: #4caf50;
+        --button-text-color: white;
+        --progress-bar-bg: #ddd;
+        --progress-bar-fill: #4caf50;
+        --accent-color: #2196f3;
+        --error-color: #f44336;
+        --font-family: "Courier New", Courier, monospace;
+      }
 
-        #game-container {
-            display: grid;
-            grid-template-areas:
-                "top-bar top-bar top-bar"
-                "task-panel center-panel upgrades-panel"
-                "hint-bar hint-bar hint-bar";
-            grid-template-columns: 250px 1fr 250px;
-            grid-template-rows: auto 1fr auto;
-            width: 90%;
-            max-width: 1000px;
-            height: 500px;
-            background-color: #fff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            padding: 20px;
-        }
+      body {
+        font-family: var(--font-family);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: background-color 0.5s, color 0.5s;
+      }
 
-        #top-bar {
-            grid-area: top-bar;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 1.2em;
-        }
+      .theme-dark {
+        --bg-color: #282c34;
+        --text-color: #abb2bf;
+        --panel-bg: #21252b;
+        --button-bg: #61afef;
+        --button-text-color: #282c34;
+        --progress-bar-bg: #3a3f4b;
+        --progress-bar-fill: #61afef;
+        --accent-color: #c678dd;
+        --error-color: #e06c75;
+      }
 
-        #task-panel {
-            grid-area: task-panel;
-            padding: 15px;
-            border-right: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-        }
-        #task-panel h3 { margin-top: 0; }
+      .theme-matrix {
+        --bg-color: #0d0208;
+        --text-color: #00ff41;
+        --panel-bg: #0a0a0a;
+        --button-bg: #008f11;
+        --button-text-color: #00ff41;
+        --progress-bar-bg: #005f00;
+        --progress-bar-fill: #00ff41;
+        --accent-color: #39ff14;
+        --error-color: #ff073a;
+      }
 
-        #progress-bar-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            margin-top: 10px;
-            height: 20px;
-        }
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background-color: #4CAF50;
-            border-radius: 4px;
-            transition: width 0.3s ease-in-out;
-        }
-        #compile-run-button { margin-top: auto; }
+      #game-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        grid-template-rows: auto 1fr auto;
+        gap: 20px;
+        width: 100%;
+        max-width: 900px;
+        background-color: var(--panel-bg);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
 
-        #center-panel {
-            grid-area: center-panel;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+      #stats-panel {
+        grid-column: 1 / 2;
+        grid-row: 1 / 2;
+        background-color: var(--bg-color);
+        padding: 15px;
+        border-radius: 5px;
+      }
+      #stats-panel h3 {
+        margin-top: 0;
+      }
+      #stats-panel p {
+        margin: 5px 0;
+      }
 
-        #generate-code-button {
-            padding: 20px 40px;
-            font-size: 1.5em;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: transform 0.1s ease, background-color 0.1s ease;
-        }
-        #generate-code-button:active {
-            transform: scale(0.95);
-            background-color: #0056b3;
-        }
+      #upgrades-panel {
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
+        background-color: var(--bg-color);
+        padding: 15px;
+        border-radius: 5px;
+        overflow-y: auto;
+      }
+      #upgrades-panel h3 {
+        margin-top: 0;
+      }
+      .upgrade-item {
+        border: 1px solid var(--text-color);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 3px;
+      }
+      .upgrade-item h4 {
+        margin: 0 0 5px 0;
+      }
+      .upgrade-item p {
+        font-size: 0.9em;
+        margin: 5px 0;
+      }
+      .upgrade-item button {
+        background-color: var(--accent-color);
+        color: var(--button-text-color);
+        width: 100%;
+      }
+      .upgrade-item button:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+      }
 
-        #bug-area {
-            margin-top: 20px;
-            min-height: 50px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        .bug-icon {
-            font-size: 2em;
-            cursor: pointer;
-            user-select: none;
-            animation: appear 0.3s ease-out;
-        }
-        @keyframes appear {
-            from { opacity: 0; transform: scale(0.5); }
-            to { opacity: 1; transform: scale(1); }
-        }
+      #main-area {
+        grid-column: 2 / 3;
+        grid-row: 1 / 4; /* Span all rows in the second column */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+      }
 
-        #upgrades-panel {
-            grid-area: upgrades-panel;
-            padding: 15px;
-            border-left: 1px solid #ddd;
-            display: none; /* Initially hidden */
-            flex-direction: column;
-            gap: 10px;
-        }
-        #upgrades-panel h3 { margin-top: 0; }
-        .upgrade-button {
-            padding: 10px;
-            cursor: pointer;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-            transition: background-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        .upgrade-button:hover:not(:disabled) {
-            background-color: #e2e6ea;
-        }
-        .upgrade-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .upgrade-button.glow {
-            animation: glowAnimation 1.5s infinite alternate;
-        }
-        @keyframes glowAnimation {
-            from { box-shadow: 0 0 5px #007bff, 0 0 10px #007bff; }
-            to { box-shadow: 0 0 15px #007bff, 0 0 20px #007bff; }
-        }
+      #editor-window {
+        width: 100%;
+        height: 150px;
+        background-color: var(--bg-color);
+        border: 1px solid var(--text-color);
+        padding: 10px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-size: 0.9em;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      #editor-window .code-line {
+        display: block;
+      }
 
+      #click-button {
+        padding: 20px 40px;
+        font-size: 1.5em;
+        background-color: var(--button-bg);
+        color: var(--button-text-color);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-bottom: 20px;
+      }
+      #click-button:hover {
+        filter: brightness(1.1);
+      }
+      #click-button:active {
+        filter: brightness(0.9);
+      }
 
-        #hint-bar {
-            grid-area: hint-bar;
-            text-align: center;
-            padding: 10px;
-            font-style: italic;
-            color: #666;
-            min-height: 20px; /* Reserve space for hint */
-        }
+      #progress-bar-container {
+        width: 100%;
+        background-color: var(--progress-bar-bg);
+        border-radius: 5px;
+        padding: 3px;
+        margin-bottom: 10px;
+      }
+      #progress-bar-fill {
+        height: 20px;
+        background-color: var(--progress-bar-fill);
+        width: 0%;
+        border-radius: 3px;
+        transition: width 0.3s ease-in-out;
+        text-align: center;
+        line-height: 20px;
+        color: var(--button-text-color);
+        font-size: 0.8em;
+      }
+      #progress-label {
+        text-align: center;
+        font-size: 0.9em;
+        margin-top: 5px;
+      }
 
-        #toast-notifications {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 1000;
+      #action-buttons-container {
+        margin-top: 20px;
+      }
+      .action-button {
+        padding: 10px 20px;
+        font-size: 1em;
+        background-color: var(--accent-color);
+        color: var(--button-text-color);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 0 5px;
+      }
+      .action-button:disabled {
+        background-color: #aaa;
+      }
+
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: none; /* Hidden by default */
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background-color: var(--panel-bg);
+        padding: 30px;
+        border-radius: 8px;
+        text-align: center;
+        min-width: 300px;
+        max-width: 80%;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .modal-content h2 {
+        margin-top: 0;
+      }
+      .modal-content p {
+        margin-bottom: 20px;
+      }
+      .modal-content button {
+        padding: 10px 20px;
+      }
+
+      #bug-hunt-modal .fix-button {
+        background-color: var(--error-color);
+        color: white;
+        padding: 15px 30px;
+        font-size: 1.2em;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
         }
-        .toast {
-            background-color: #28a745;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            opacity: 0;
-            transform: translateX(100%);
-            animation: slideInAndOut 5s forwards;
+        50% {
+          transform: scale(1.05);
         }
-        @keyframes slideInAndOut {
-            0% { opacity: 0; transform: translateX(100%); }
-            15% { opacity: 1; transform: translateX(0); }
-            85% { opacity: 1; transform: translateX(0); }
-            100% { opacity: 0; transform: translateX(100%); }
+        100% {
+          transform: scale(1);
         }
-        
-        .final-message {
-            font-size: 1.5em;
-            color: green;
-            text-align: center;
-        }
+      }
+
+      #chapter-title {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.8em;
+        color: var(--accent-color);
+      }
+      #flavor-popup {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--accent-color);
+        color: var(--button-text-color);
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 1001;
+        display: none; /* Hidden by default */
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body class="theme-default">
+    <h1 id="chapter-title">Chapter 1: Hello World</h1>
 
     <div id="game-container">
-        <div id="top-bar">
-            <span id="code-tokens-display">💻 Code Tokens: 0</span>
-            <span id="bugs-display">🐞 Bugs: 0</span>
+      <div id="stats-panel">
+        <h3>Stats</h3>
+        <p>Code Snippets (CS): <span id="cs-stat">0</span></p>
+        <p>CS/sec: <span id="cs-per-sec-stat">0</span></p>
+        <p>CS/click: <span id="cs-per-click-stat">1</span></p>
+        <p>Debug Tokens: <span id="debug-tokens-stat">0</span></p>
+        <p>XP: <span id="xp-stat">0</span></p>
+      </div>
+
+      <div id="upgrades-panel">
+        <h3>Upgrades</h3>
+        <div id="upgrades-list">
+          <!-- Upgrades will be populated here by JS -->
+        </div>
+      </div>
+
+      <div id="main-area">
+        <div id="editor-window">
+          <span class="code-line">> Initializing editor...</span>
+          <span class="code-line">> Ready.</span>
         </div>
 
-        <div id="task-panel">
-            <h3>Current Task</h3>
-            <p id="current-task-title">Get to 10 Code Tokens</p>
-            <div id="progress-bar-container">
-                <div id="progress-bar"></div>
-            </div>
-            <button id="compile-run-button" class="upgrade-button" data-cost="100" style="display: none;">Compile & Run Script (100 💻)</button>
-        </div>
+        <button id="click-button">Write Code</button>
 
-        <div id="center-panel">
-            <button id="generate-code-button">Generate Code</button>
-            <div id="bug-area"></div>
+        <div id="progress-bar-container">
+          <div id="progress-bar-fill">0%</div>
         </div>
+        <div id="progress-label">Next Milestone: 10 CS</div>
 
-        <div id="upgrades-panel">
-            <h3>Upgrades</h3>
-            <button id="buy-auto-scripter" class="upgrade-button" data-cost="40" style="display: none;">Auto-Scripter (40 💻)<br><small>+1 💻/sec</small></button>
-            <button id="buy-debug-helper" class="upgrade-button" data-cost="25" style="display: none;">Debug Helper (25 💻)<br><small>Auto-fixes 1 🐞/10s</small></button>
-            <button id="buy-code-templates" class="upgrade-button" data-cost="50" style="display: none;">Code Templates (50 💻)<br><small>+2 💻 per click</small></button>
+        <div id="action-buttons-container">
+          <!-- Action buttons like "Apply Refactor", "Ship App" will appear here -->
         </div>
-        
-        <div id="hint-bar">
-            <span id="tooltip-hint"></span>
-        </div>
+      </div>
     </div>
 
-    <div id="toast-notifications"></div>
+    <!-- Modals -->
+    <div id="generic-modal" class="modal">
+      <div class="modal-content">
+        <h2 id="modal-title">Modal Title</h2>
+        <p id="modal-text">Modal text goes here.</p>
+        <button id="modal-close-button" class="action-button">Close</button>
+      </div>
+    </div>
+
+    <div id="cutscene-modal" class="modal">
+      <div class="modal-content">
+        <h2 id="cutscene-title">Cutscene</h2>
+        <p id="cutscene-text">Cutscene playing...</p>
+        <p>Autoclosing in: <span id="cutscene-timer">10</span>s</p>
+      </div>
+    </div>
+
+    <div id="bug-hunt-modal" class="modal">
+      <div class="modal-content">
+        <h2><span style="color: var(--error-color)">BUG DETECTED!</span></h2>
+        <p id="bug-hunt-flavor-text">The AI made a mistake!</p>
+        <p>Time remaining: <span id="bug-hunt-timer">15</span>s</p>
+        <button class="fix-button" id="fix-bug-button">Fix Bug!</button>
+        <p>Bugs fixed: <span id="bugs-fixed-count">0</span></p>
+      </div>
+    </div>
+
+    <div id="flavor-popup">
+      <p id="flavor-popup-text">Flavor text!</p>
+    </div>
+
+    <audio
+      id="click-sound"
+      src="data:audio/wav;base64,UklGRkYFAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQFAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ=="
+    ></audio>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const codeTokensDisplay = document.getElementById('code-tokens-display');
-            const bugsDisplay = document.getElementById('bugs-display');
-            const generateCodeButton = document.getElementById('generate-code-button');
-            const bugArea = document.getElementById('bug-area');
-            const upgradesPanel = document.getElementById('upgrades-panel');
-            const buyAutoScripterButton = document.getElementById('buy-auto-scripter');
-            const buyDebugHelperButton = document.getElementById('buy-debug-helper');
-            const buyCodeTemplatesButton = document.getElementById('buy-code-templates');
-            const currentTaskTitle = document.getElementById('current-task-title');
-            const progressBar = document.getElementById('progress-bar');
-            const compileRunButton = document.getElementById('compile-run-button');
-            const toastNotifications = document.getElementById('toast-notifications');
-            const tooltipHint = document.getElementById('tooltip-hint');
+      const gameState = {
+        cs: 0,
+        debugTokens: 0,
+        xp: 0,
+        csPerClick: 1,
+        csPerSecondPassive: 0, // From Auto-Snippets
+        csFromRefactorMacro: 0, // Specifically for Refactor Macro
 
-            // --- Game State Variables ---
-            let codeTokens = 0;
-            let bugs = 0;
-            let clicksForBugSpawn = 0;
-            const MAX_BUGS = 2;
-            let ctPerClick = 1;
+        milestone1Target: 10,
+        milestone2Target: 25,
+        milestone3Target: 50,
 
-            let autoScripterOwned = false;
-            let autoScripterRate = 1; // CT/sec
-            let debugHelperOwned = false;
-            let codeTemplatesOwned = false;
-            
-            let gameEnded = false;
-            let initialUpgradesUnlocked = false; // To track if upgrades panel has been shown once
+        milestone1Reached: false,
+        milestone1ActionDone: false,
+        milestone2Reached: false,
+        milestone2ActionDone: false,
+        milestone3Reached: false,
+        milestone3ActionDone: false,
 
-            // --- Phases & Tasks ---
-            let currentPhase = 1; 
-            // Phase 1: 20 CT (Unlock Upgrades Panel)
-            // Phase 2: Buy Auto-Scripter (40 CT)
-            // Phase 3: Accumulate 100 CT (Other upgrades available)
-            // Phase 4: Compile & Run (100 CT)
+        gameEnded: false,
+        isBugActive: false,
+        isCutsceneActive: false,
 
-            // --- Intervals ---
-            let autoScripterInterval;
-            let debugHelperInterval;
-            let tooltipHintInterval;
+        lastRefactorMacroTriggerTime: 0,
+        refactorMacroInterval: 10000, // 10 seconds in ms
+        refactorMacroAmount: 5,
 
-            // --- Utility Functions ---
-            function updateResourceDisplay() {
-                codeTokensDisplay.textContent = `💻 Code Tokens: ${Math.floor(codeTokens * 10) / 10}`;
-                bugsDisplay.textContent = `🐞 Bugs: ${bugs}`;
+        currentTheme: "theme-default",
+      };
+
+      const upgrades = {
+        autoSnippets: {
+          id: "autoSnippets",
+          name: "Auto-Snippets v1.0",
+          cost: 10,
+          owned: false,
+          description: "+1 CS/sec. +0.1 CS/click.",
+          csPerSecondEffect: 1,
+          csPerClickBonus: 0.1,
+          unlocksAt: 0, // Available from start, effectively after M1 for purchase
+        },
+        formatterBot: {
+          id: "formatterBot",
+          name: "Formatter Bot",
+          cost: 25,
+          owned: false,
+          description:
+            "Reduces future bug chance (conceptual for Ch.1). +0.1 CS/click.",
+          csPerClickBonus: 0.1,
+          unlocksAt: gameState.milestone1Target,
+        },
+        refactorMacro: {
+          id: "refactorMacro",
+          name: "Refactor Macro",
+          cost: 50,
+          owned: false,
+          description: "+5 CS every 10s. +0.1 CS/click.",
+          csPerClickBonus: 0.1,
+          unlocksAt: gameState.milestone2Target,
+        },
+      };
+
+      // UI Elements
+      const clickButton = document.getElementById("click-button");
+      const csStat = document.getElementById("cs-stat");
+      const csPerSecStat = document.getElementById("cs-per-sec-stat");
+      const csPerClickStat = document.getElementById("cs-per-click-stat");
+      const debugTokensStat = document.getElementById("debug-tokens-stat");
+      const xpStat = document.getElementById("xp-stat");
+
+      const editorWindow = document.getElementById("editor-window");
+      const progressBarFill = document.getElementById("progress-bar-fill");
+      const progressLabel = document.getElementById("progress-label");
+
+      const upgradesListDiv = document.getElementById("upgrades-list");
+      const actionButtonsContainer = document.getElementById(
+        "action-buttons-container"
+      );
+
+      const genericModal = document.getElementById("generic-modal");
+      const modalTitle = document.getElementById("modal-title");
+      const modalText = document.getElementById("modal-text");
+      const modalCloseButton = document.getElementById("modal-close-button");
+
+      const cutsceneModal = document.getElementById("cutscene-modal");
+      const cutsceneTitle = document.getElementById("cutscene-title");
+      const cutsceneText = document.getElementById("cutscene-text");
+      const cutsceneTimerDisplay = document.getElementById("cutscene-timer");
+
+      const bugHuntModal = document.getElementById("bug-hunt-modal");
+      const bugHuntFlavorText = document.getElementById("bug-hunt-flavor-text");
+      const bugHuntTimerDisplay = document.getElementById("bug-hunt-timer");
+      const fixBugButton = document.getElementById("fix-bug-button");
+      const bugsFixedCountDisplay = document.getElementById("bugs-fixed-count");
+
+      const flavorPopup = document.getElementById("flavor-popup");
+      const flavorPopupText = document.getElementById("flavor-popup-text");
+
+      const clickSound = document.getElementById("click-sound");
+
+      // Game Logic
+      function writeToEditor(message, type = "info") {
+        const line = document.createElement("span");
+        line.classList.add("code-line");
+        let prefix = "> ";
+        if (type === "error") prefix = "! BUG: ";
+        if (type === "system") prefix = "// SYSTEM: ";
+        if (type === "milestone") prefix = "## ";
+        line.textContent = prefix + message;
+        editorWindow.appendChild(line);
+        editorWindow.scrollTop = editorWindow.scrollHeight;
+      }
+
+      function updateStatsUI() {
+        csStat.textContent = Math.floor(gameState.cs);
+        const totalCsPerSecond =
+          gameState.csPerSecondPassive +
+          (upgrades.refactorMacro.owned
+            ? gameState.csFromRefactorMacro /
+              (gameState.refactorMacroInterval / 1000)
+            : 0);
+        csPerSecStat.textContent = totalCsPerSecond.toFixed(1);
+        csPerClickStat.textContent = gameState.csPerClick.toFixed(1);
+        debugTokensStat.textContent = gameState.debugTokens;
+        xpStat.textContent = gameState.xp;
+      }
+
+      function updateProgressBar() {
+        let currentTarget, progressBase;
+        if (!gameState.milestone1Reached) {
+          currentTarget = gameState.milestone1Target;
+          progressBase = 0;
+          progressLabel.textContent = `Next Milestone: AI Refactor Suggestion (${currentTarget} CS)`;
+        } else if (!gameState.milestone2Reached) {
+          currentTarget = gameState.milestone2Target;
+          progressBase = gameState.milestone1Target;
+          progressLabel.textContent = `Next Milestone: AI Bug Event (${currentTarget} CS)`;
+        } else if (!gameState.milestone3Reached) {
+          currentTarget = gameState.milestone3Target;
+          progressBase = gameState.milestone2Target;
+          progressLabel.textContent = `Next Milestone: Ship HelloWorld.exe (${currentTarget} CS)`;
+        } else {
+          progressBarFill.style.width = "100%";
+          progressBarFill.textContent = "All Milestones Reached!";
+          progressLabel.textContent = "Ready to Ship!";
+          return;
+        }
+
+        const progress = Math.max(
+          0,
+          (gameState.cs - progressBase) / (currentTarget - progressBase)
+        );
+        const percentage = Math.min(100, Math.floor(progress * 100));
+        progressBarFill.style.width = percentage + "%";
+        progressBarFill.textContent = percentage + "%";
+      }
+
+      function showFlavorPopup(text, duration = 3000) {
+        flavorPopupText.textContent = text;
+        flavorPopup.style.display = "block";
+        setTimeout(() => {
+          flavorPopup.style.display = "none";
+        }, duration);
+      }
+
+      function addXP(amount) {
+        gameState.xp += amount;
+        showFlavorPopup(`+${amount} XP Earned!`, 2000);
+        checkThemeUnlock();
+      }
+
+      function checkThemeUnlock() {
+        let newTheme = null;
+        if (gameState.xp >= 30 && gameState.currentTheme !== "theme-matrix") {
+          // Example: 10 (M1) + 15 (M2) + 5 (Bug) = 30
+          newTheme = "theme-matrix";
+          showFlavorPopup("UI Theme 'Matrix Green' Unlocked!", 3000);
+        } else if (
+          gameState.xp >= 10 &&
+          gameState.currentTheme === "theme-default"
+        ) {
+          // M1 XP
+          newTheme = "theme-dark";
+          showFlavorPopup("UI Theme 'Syntax Night' Unlocked!", 3000);
+        }
+
+        if (newTheme) {
+          document.body.classList.remove(gameState.currentTheme);
+          document.body.classList.add(newTheme);
+          gameState.currentTheme = newTheme;
+        }
+      }
+
+      function renderUpgrades() {
+        upgradesListDiv.innerHTML = "";
+        for (const key in upgrades) {
+          const upgrade = upgrades[key];
+          if (gameState.cs >= upgrade.unlocksAt || upgrade.owned) {
+            // Show if CS meets unlock OR already owned
+            // Check if it should be shown based on current game progress (milestones might gate this better)
+            let milestoneRequirementMet = true;
+            if (upgrade.id === "autoSnippets" && !gameState.milestone1Reached)
+              milestoneRequirementMet = false;
+            if (upgrade.id === "formatterBot" && !gameState.milestone2Reached)
+              milestoneRequirementMet = false;
+            if (upgrade.id === "refactorMacro" && !gameState.milestone3Reached)
+              milestoneRequirementMet = false;
+
+            // For this specific game, let's unlock based on milestone reached.
+            // AutoSnippets after M1, FormatterBot after M2, RefactorMacro after M3.
+            // The `unlocksAt` CS value in `upgrades` was a bit ambiguous.
+            // This check overrides it for clarity per spec.
+
+            if (
+              upgrade.id === "autoSnippets" &&
+              !gameState.milestone1ActionDone
+            )
+              continue;
+            if (
+              upgrade.id === "formatterBot" &&
+              !gameState.milestone2ActionDone
+            )
+              continue;
+            if (upgrade.id === "refactorMacro" && !gameState.milestone3Reached)
+              continue; // Refactor Macro available AT M3
+
+            const item = document.createElement("div");
+            item.classList.add("upgrade-item");
+            item.innerHTML = `
+                        <h4>${upgrade.name}</h4>
+                        <p>${upgrade.description}</p>
+                        <p>Cost: ${upgrade.cost} CS</p>
+                        <button id="buy-${upgrade.id}" ${
+              upgrade.owned ? "disabled" : ""
+            }>
+                            ${upgrade.owned ? "Owned" : "Buy"}
+                        </button>
+                    `;
+            upgradesListDiv.appendChild(item);
+
+            if (!upgrade.owned) {
+              document.getElementById(`buy-${upgrade.id}`).onclick = () =>
+                buyUpgrade(key);
+              document.getElementById(`buy-${upgrade.id}`).disabled =
+                gameState.cs < upgrade.cost;
             }
+          }
+        }
+      }
 
-            function showToast(message) {
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                toast.textContent = message;
-                toastNotifications.appendChild(toast);
-                setTimeout(() => {
-                    toast.remove();
-                }, 5000);
+      function buyUpgrade(key) {
+        const upgrade = upgrades[key];
+        if (gameState.cs >= upgrade.cost && !upgrade.owned) {
+          gameState.cs -= upgrade.cost;
+          upgrade.owned = true;
+          gameState.csPerClick += upgrade.csPerClickBonus;
+          if (upgrade.csPerSecondEffect) {
+            gameState.csPerSecondPassive += upgrade.csPerSecondEffect;
+          }
+          if (upgrade.id === "refactorMacro") {
+            gameState.lastRefactorMacroTriggerTime = Date.now(); // Start its timer
+          }
+          writeToEditor(`Upgrade Purchased: ${upgrade.name}`, "system");
+          updateAllUI();
+        }
+      }
+
+      function checkMilestones() {
+        if (gameState.gameEnded) return;
+
+        // Milestone 1: 10 CS
+        if (
+          !gameState.milestone1Reached &&
+          gameState.cs >= gameState.milestone1Target
+        ) {
+          gameState.milestone1Reached = true;
+          writeToEditor(
+            `Milestone 1 Reached! (${gameState.milestone1Target} CS)`,
+            "milestone"
+          );
+          showFlavorPopup("AI suggests a refactoring function!");
+          addXP(10);
+
+          const applyButton = document.createElement("button");
+          applyButton.textContent = "Apply AI Refactor";
+          applyButton.classList.add("action-button");
+          applyButton.onclick = () => {
+            triggerCutscene(
+              "AI Refactoring...",
+              "The AI is analyzing and refactoring your codebase. This might take a moment...",
+              10,
+              () => {
+                gameState.milestone1ActionDone = true; // Mark cutscene as done
+                showFlavorPopup("Not bad, you just taught your AI the basics!");
+                writeToEditor(
+                  "AI refactoring complete. Auto-Snippets v1.0 research available.",
+                  "system"
+                );
+                updateAllUI(); // Render upgrades now that action is done
+              }
+            );
+            applyButton.remove();
+          };
+          actionButtonsContainer.appendChild(applyButton);
+        }
+
+        // Milestone 2: 25 CS
+        if (
+          gameState.milestone1ActionDone &&
+          !gameState.milestone2Reached &&
+          gameState.cs >= gameState.milestone2Target
+        ) {
+          gameState.milestone2Reached = true;
+          writeToEditor(
+            `Milestone 2 Reached! (${gameState.milestone2Target} CS)`,
+            "milestone"
+          );
+          addXP(15);
+          showFlavorPopup(
+            "Oops—the AI thinks tabs are 8 spaces wide… Time to debug!"
+          );
+          triggerBugHunt();
+        }
+
+        // Milestone 3: 50 CS
+        if (
+          gameState.milestone2ActionDone &&
+          !gameState.milestone3Reached &&
+          gameState.cs >= gameState.milestone3Target
+        ) {
+          gameState.milestone3Reached = true;
+          writeToEditor(
+            `Milestone 3 Reached! (${gameState.milestone3Target} CS)`,
+            "milestone"
+          );
+          addXP(25);
+          writeToEditor("Refactor Macro research available.", "system");
+
+          const shipButton = document.createElement("button");
+          shipButton.textContent = "Ship HelloWorld.exe";
+          shipButton.classList.add("action-button");
+          shipButton.onclick = () => {
+            triggerCutscene(
+              "Shipping HelloWorld.exe!",
+              "Finalizing build... Compiling... Packaging... Your HelloWorld app is shipping!",
+              5, // Shorter vignette
+              () => {
+                gameState.milestone3ActionDone = true;
+                gameState.gameEnded = true;
+                showFlavorPopup(
+                  "HelloWorld.exe shipped successfully! Chapter 1 Complete!"
+                );
+                clickButton.disabled = true;
+                writeToEditor(
+                  "Chapter 1 Complete! Congratulations!",
+                  "milestone"
+                );
+                // Final message or screen
+                showGenericModal(
+                  "Chapter Complete!",
+                  `You've successfully shipped HelloWorld.exe!\n\nFinal Stats:\nCS: ${Math.floor(
+                    gameState.cs
+                  )}\nXP: ${gameState.xp}\nDebug Tokens: ${
+                    gameState.debugTokens
+                  }\n\nThanks for playing! Refresh to start over.`,
+                  true
+                );
+              }
+            );
+            shipButton.remove();
+          };
+          actionButtonsContainer.appendChild(shipButton);
+        }
+        updateAllUI(); // Ensure upgrades enable/disable correctly
+      }
+
+      function triggerCutscene(title, text, duration, onComplete) {
+        if (gameState.isCutsceneActive) return;
+        gameState.isCutsceneActive = true;
+
+        cutsceneTitle.textContent = title;
+        cutsceneText.textContent = text;
+        cutsceneModal.style.display = "flex";
+
+        let timeLeft = duration;
+        cutsceneTimerDisplay.textContent = timeLeft;
+
+        const interval = setInterval(() => {
+          timeLeft--;
+          cutsceneTimerDisplay.textContent = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            cutsceneModal.style.display = "none";
+            gameState.isCutsceneActive = false;
+            if (onComplete) onComplete();
+          }
+        }, 1000);
+      }
+
+      let bugFixClicks = 0;
+      function triggerBugHunt() {
+        if (gameState.isBugActive) return;
+        gameState.isBugActive = true;
+        bugFixClicks = 0;
+        bugsFixedCountDisplay.textContent = bugFixClicks;
+
+        bugHuntFlavorText.textContent =
+          "Oops—the AI thinks tabs are 8 spaces wide… Time to debug!";
+        bugHuntModal.style.display = "flex";
+
+        let timeLeft = 15;
+        bugHuntTimerDisplay.textContent = timeLeft;
+
+        const interval = setInterval(() => {
+          timeLeft--;
+          bugHuntTimerDisplay.textContent = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            bugHuntModal.style.display = "none";
+            gameState.isBugActive = false;
+
+            gameState.debugTokens += 5; // Fixed reward
+            addXP(5); // Fixed XP
+            showFlavorPopup(`Bug Hunt Complete! +5 Debug Tokens, +5 XP.`);
+            writeToEditor(
+              "Bug fixed! Automation restored. Formatter Bot research available.",
+              "system"
+            );
+            gameState.milestone2ActionDone = true;
+            updateAllUI();
+          }
+        }, 1000);
+      }
+
+      fixBugButton.onclick = () => {
+        if (gameState.isBugActive) {
+          bugFixClicks++;
+          bugsFixedCountDisplay.textContent = bugFixClicks;
+          clickSound.currentTime = 0;
+          clickSound.play();
+        }
+      };
+
+      function showGenericModal(title, text, isEndOfGame = false) {
+        modalTitle.textContent = title;
+        modalText.innerHTML = text.replace(/\n/g, "<br>"); // Allow newlines in text
+        genericModal.style.display = "flex";
+        if (isEndOfGame) {
+          modalCloseButton.textContent = "Play Again (Refresh)";
+          modalCloseButton.onclick = () => window.location.reload();
+        } else {
+          modalCloseButton.textContent = "Close";
+          modalCloseButton.onclick = () =>
+            (genericModal.style.display = "none");
+        }
+      }
+
+      clickButton.addEventListener("click", () => {
+        if (
+          gameState.gameEnded ||
+          gameState.isBugActive ||
+          gameState.isCutsceneActive
+        )
+          return;
+        gameState.cs += gameState.csPerClick;
+        clickSound.currentTime = 0;
+        clickSound.play();
+        writeToEditor(`+${gameState.csPerClick.toFixed(1)} CS (manual click)`);
+        updateAllUI();
+      });
+
+      function gameLoop(timestamp) {
+        if (gameState.gameEnded) return;
+
+        const deltaTime =
+          (timestamp - (gameState.lastTick || timestamp)) / 1000; // seconds
+        gameState.lastTick = timestamp;
+
+        if (!gameState.isBugActive && !gameState.isCutsceneActive) {
+          // Passive CS generation
+          if (gameState.csPerSecondPassive > 0) {
+            gameState.cs += gameState.csPerSecondPassive * deltaTime;
+          }
+
+          // Refactor Macro
+          if (upgrades.refactorMacro.owned) {
+            if (
+              timestamp - gameState.lastRefactorMacroTriggerTime >=
+              gameState.refactorMacroInterval
+            ) {
+              gameState.cs += gameState.refactorMacroAmount;
+              gameState.lastRefactorMacroTriggerTime = timestamp;
+              writeToEditor(
+                `+${gameState.refactorMacroAmount} CS (Refactor Macro)`,
+                "system"
+              );
+              showFlavorPopup(
+                `+${gameState.refactorMacroAmount} CS from Refactor Macro!`,
+                1500
+              );
             }
+          }
+        }
 
-            function updateTaskDisplay() {
-                let taskText = "";
-                let progressPercent = 0;
+        updateAllUI();
+        requestAnimationFrame(gameLoop);
+      }
 
-                if (gameEnded) {
-                    currentTaskTitle.innerHTML = `<div class="final-message">Hello World script compiled successfully!<br>Chapter Complete!</div>`;
-                    progressBar.style.width = '100%';
-                    progressBar.style.backgroundColor = '#28a745';
-                    return;
-                }
+      function updateAllUI() {
+        updateStatsUI();
+        updateProgressBar();
+        renderUpgrades(); // Also handles enabling/disabling buy buttons
+        checkMilestones(); // Check milestones after CS updates
+      }
 
-                switch (currentPhase) {
-                    case 1: // Get to 20 Code Tokens (to unlock Upgrades panel)
-                        taskText = "Get to 20 Code Tokens";
-                        progressPercent = (codeTokens / 20) * 100;
-                        if (codeTokens >= 20 && !initialUpgradesUnlocked) {
-                            upgradesPanel.style.display = 'flex';
-                            buyAutoScripterButton.style.display = 'block'; // Only show this initially
-                            showToast("Upgrades Panel Unlocked! Auto-Scripter available.");
-                            initialUpgradesUnlocked = true;
-                            currentPhase = 2; // Transition to Phase 2: Buy Auto-Scripter
-                            // Fall through to update text for Phase 2 immediately
-                        } else if (codeTokens >= 20 && initialUpgradesUnlocked) { // Already unlocked, ensure phase is 2
-                             currentPhase = 2;
-                        }
-                        if (currentPhase !== 2) break; // Break if not falling through to phase 2 logic
+      // Initial Setup
+      function initGame() {
+        writeToEditor("Welcome to Chapter 1: Hello World!");
+        writeToEditor("Click 'Write Code' to generate Code Snippets (CS).");
+        updateAllUI();
+        requestAnimationFrame(gameLoop);
+      }
 
-                    case 2: // Buy Auto-Scripter
-                        const autoScripterCost = parseInt(buyAutoScripterButton.dataset.cost);
-                        taskText = `Buy Auto-Scripter (Cost: ${autoScripterCost} 💻)`;
-                        progressPercent = autoScripterOwned ? 100 : (codeTokens / autoScripterCost) * 100;
-                        if (autoScripterOwned) {
-                            currentPhase = 3;
-                            buyDebugHelperButton.style.display = 'block'; // Other upgrades appear
-                            buyCodeTemplatesButton.style.display = 'block';
-                            // Fall through to update text for Phase 3 immediately
-                        }
-                        if (currentPhase !== 3) break; // Break if not falling through to phase 3 logic
-                    
-                    case 3: // Accumulate 100 Code Tokens
-                        taskText = "Accumulate 100 Code Tokens";
-                        progressPercent = (codeTokens / 100) * 100;
-                        if (codeTokens >= 100) {
-                            currentPhase = 4;
-                            // Fall through to update text for Phase 4 immediately
-                        }
-                         if (currentPhase !== 4) break; // Break if not falling through to phase 4 logic
-
-                    case 4: // Spend 100 CT to compile
-                        const compileCost = parseInt(compileRunButton.dataset.cost);
-                        taskText = `Spend ${compileCost} CT to compile and run your first script`;
-                        // Progress shows how close you are to affording it, or 100% if you can
-                        progressPercent = codeTokens >= compileCost ? 100 : (codeTokens / compileCost) * 100; 
-                        compileRunButton.style.display = 'block';
-                        break;
-                }
-                currentTaskTitle.textContent = taskText;
-                progressBar.style.width = `${Math.min(100, Math.max(0, progressPercent))}%`;
-                updateUpgradeButtonsState();
-            }
-
-            function updateUpgradeButtonsState() {
-                if (gameEnded) return;
-
-                const buttons = [buyAutoScripterButton, buyDebugHelperButton, buyCodeTemplatesButton, compileRunButton];
-                buttons.forEach(button => {
-                    if (!button || button.style.display === 'none') return; // Don't process hidden buttons
-                    
-                    const cost = parseInt(button.dataset.cost);
-                    const canAfford = codeTokens >= cost;
-                    
-                    button.disabled = !canAfford;
-                    if (button === buyAutoScripterButton && autoScripterOwned) button.disabled = true;
-                    if (button === buyDebugHelperButton && debugHelperOwned) button.disabled = true;
-                    if (button === buyCodeTemplatesButton && codeTemplatesOwned) button.disabled = true;
-                    if (button === compileRunButton && currentPhase !== 4) button.disabled = true; // Ensure compile button only active in phase 4 + affordable
-
-
-                    if (canAfford && !button.disabled) {
-                        button.classList.add('glow');
-                    } else {
-                        button.classList.remove('glow');
-                    }
-                });
-            }
-
-            // --- Core Game Logic ---
-            generateCodeButton.addEventListener('click', () => {
-                if (gameEnded) return;
-
-                codeTokens += ctPerClick;
-                clicksForBugSpawn++;
-
-                generateCodeButton.style.transform = 'scale(0.95)';
-                setTimeout(() => { generateCodeButton.style.transform = 'scale(1)'; }, 100);
-
-                if (clicksForBugSpawn % 8 === 0) { // Bug spawns every 8th click
-                    spawnBug();
-                }
-
-                updateAllDisplays();
-            });
-
-            function spawnBug() {
-                if (bugs < MAX_BUGS) {
-                    bugs++;
-                    const bugElement = document.createElement('span');
-                    bugElement.className = 'bug-icon';
-                    bugElement.textContent = '🐞';
-                    bugElement.addEventListener('click', () => fixBug(bugElement, 0.5));
-                    bugArea.appendChild(bugElement);
-                    updateResourceDisplay();
-                }
-            }
-
-            function fixBug(bugElement, cost) {
-                if (gameEnded) return;
-                if (codeTokens >= cost) {
-                    codeTokens -= cost;
-                    bugs--;
-                    bugElement.remove();
-                    updateAllDisplays();
-                } else if (cost === 0) { 
-                    bugs--;
-                    bugElement.remove();
-                    updateAllDisplays();
-                }
-            }
-            
-            function updateAllDisplays() {
-                if (gameEnded) { // Ensure final state is shown if game ended elsewhere
-                     updateResourceDisplay();
-                     updateTaskDisplay(); // This will show the final message
-                     return;
-                }
-                updateResourceDisplay();
-                updateTaskDisplay(); 
-            }
-
-            // --- Upgrades Purchase ---
-            buyAutoScripterButton.addEventListener('click', () => {
-                const cost = parseInt(buyAutoScripterButton.dataset.cost);
-                if (codeTokens >= cost && !autoScripterOwned) {
-                    codeTokens -= cost;
-                    autoScripterOwned = true;
-                    buyAutoScripterButton.disabled = true;
-                    buyAutoScripterButton.classList.remove('glow');
-                    buyAutoScripterButton.innerHTML += " (Owned)";
-                    showToast(`Auto-Scripter purchased! (+${autoScripterRate} 💻/sec)`);
-                    
-                    autoScripterInterval = setInterval(() => {
-                        if (gameEnded) { clearInterval(autoScripterInterval); return; }
-                        codeTokens += autoScripterRate;
-                        updateAllDisplays();
-                    }, 1000);
-                    updateAllDisplays(); 
-                }
-            });
-
-            buyDebugHelperButton.addEventListener('click', () => {
-                const cost = parseInt(buyDebugHelperButton.dataset.cost);
-                if (codeTokens >= cost && !debugHelperOwned) {
-                    codeTokens -= cost;
-                    debugHelperOwned = true;
-                    buyDebugHelperButton.disabled = true;
-                    buyDebugHelperButton.classList.remove('glow');
-                    buyDebugHelperButton.innerHTML += " (Owned)";
-                    showToast("Debug Helper purchased! (Auto-fixes 1 🐞/10s)");
-
-                    debugHelperInterval = setInterval(() => {
-                        if (gameEnded) { clearInterval(debugHelperInterval); return; }
-                        if (bugs > 0) {
-                            const firstBugElement = bugArea.querySelector('.bug-icon');
-                            if (firstBugElement) {
-                                fixBug(firstBugElement, 0); 
-                            }
-                        }
-                    }, 10000);
-                    updateAllDisplays();
-                }
-            });
-
-            buyCodeTemplatesButton.addEventListener('click', () => {
-                const cost = parseInt(buyCodeTemplatesButton.dataset.cost);
-                if (codeTokens >= cost && !codeTemplatesOwned) {
-                    codeTokens -= cost;
-                    codeTemplatesOwned = true;
-                    ctPerClick += 2;
-                    buyCodeTemplatesButton.disabled = true;
-                    buyCodeTemplatesButton.classList.remove('glow');
-                    buyCodeTemplatesButton.innerHTML += " (Owned)";
-                    showToast("Code Templates purchased! (+2 💻 per click)");
-                    updateAllDisplays();
-                }
-            });
-
-            compileRunButton.addEventListener('click', () => {
-                const cost = parseInt(compileRunButton.dataset.cost);
-                if (codeTokens >= cost && currentPhase === 4 && !gameEnded) {
-                    codeTokens -= cost;
-                    gameEnded = true;
-                    showToast("Hello World script compiled! Chapter Complete!");
-                    
-                    generateCodeButton.disabled = true;
-                    [buyAutoScripterButton, buyDebugHelperButton, buyCodeTemplatesButton, compileRunButton].forEach(b => {
-                        if (b) b.disabled = true;
-                        if (b) b.classList.remove('glow');
-                    });
-                    if (autoScripterInterval) clearInterval(autoScripterInterval);
-                    if (debugHelperInterval) clearInterval(debugHelperInterval);
-                    if (tooltipHintInterval) clearInterval(tooltipHintInterval);
-                    
-                    document.getElementById('center-panel').innerHTML = ''; 
-                    tooltipHint.textContent = "Congratulations! You've automated your first script!";
-                    updateAllDisplays(); // Call to show final message and resource counts
-                }
-            });
-
-            // --- Tooltip Hints ---
-            function showTooltipHints() {
-                const hints = [
-                    "Click 'Generate Code' to earn Code Tokens!",
-                    "Bugs slowing you down? Click them to fix, or automate debugging later!",
-                    "Save up Code Tokens to buy powerful upgrades.",
-                    "The Auto-Scripter generates Code Tokens passively.",
-                    "Code Templates make your manual clicks more effective!",
-                    `Reach ${compileRunButton.dataset.cost} Code Tokens to compile your 'Hello World' script.`
-                ];
-                let hintIndex = 0;
-                tooltipHintInterval = setInterval(() => {
-                    if (gameEnded) { clearInterval(tooltipHintInterval); return; }
-                    if (currentPhase >= 2 && !debugHelperOwned && bugs > 0 && codeTokens >= parseInt(buyDebugHelperButton.dataset.cost)/2) { // Hint if bugs are an issue and debug helper not bought
-                         tooltipHint.textContent = "Bugs slowing you down? The Debug Helper can automate fixing them!";
-                    } else {
-                        tooltipHint.textContent = hints[hintIndex % hints.length];
-                        hintIndex++;
-                    }
-                }, 30000); 
-            }
-
-            // --- Initialization ---
-            function init() {
-                updateAllDisplays();
-                showTooltipHints();
-                tooltipHint.textContent = "Welcome! Click 'Generate Code' to start."; 
-            }
-
-            init();
-        });
+      initGame();
     </script>
-</body>
+  </body>
 </html>
