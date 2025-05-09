@@ -203,7 +203,7 @@
             <div id="progress-bar-container">
                 <div id="progress-bar"></div>
             </div>
-            <button id="compile-run-button" class="upgrade-button" style="display: none;">Compile & Run Script (50 💻)</button>
+            <button id="compile-run-button" class="upgrade-button" data-cost="100" style="display: none;">Compile & Run Script (100 💻)</button>
         </div>
 
         <div id="center-panel">
@@ -213,9 +213,9 @@
 
         <div id="upgrades-panel">
             <h3>Upgrades</h3>
-            <button id="buy-auto-scripter" class="upgrade-button" data-cost="20" style="display: none;">Auto-Scripter (20 💻)<br><small>+1 💻/sec</small></button>
-            <button id="buy-debug-helper" class="upgrade-button" data-cost="10" style="display: none;">Debug Helper (10 💻)<br><small>Auto-fixes 1 🐞/10s</small></button>
-            <button id="buy-code-templates" class="upgrade-button" data-cost="30" style="display: none;">Code Templates (30 💻)<br><small>+2 💻 per click</small></button>
+            <button id="buy-auto-scripter" class="upgrade-button" data-cost="40" style="display: none;">Auto-Scripter (40 💻)<br><small>+1 💻/sec</small></button>
+            <button id="buy-debug-helper" class="upgrade-button" data-cost="25" style="display: none;">Debug Helper (25 💻)<br><small>Auto-fixes 1 🐞/10s</small></button>
+            <button id="buy-code-templates" class="upgrade-button" data-cost="50" style="display: none;">Code Templates (50 💻)<br><small>+2 💻 per click</small></button>
         </div>
         
         <div id="hint-bar">
@@ -255,14 +255,14 @@
             let codeTemplatesOwned = false;
             
             let gameEnded = false;
+            let initialUpgradesUnlocked = false; // To track if upgrades panel has been shown once
 
             // --- Phases & Tasks ---
-            // (Simplified: logic will control task text and progression checks)
             let currentPhase = 1; 
-            // Phase 1: 10 CT
-            // Phase 2: 20 CT, Unlock Auto-Scripter
-            // Phase 3: Buy Auto-Scripter, then Accumulate 50 CT (upgrades optional)
-            // Phase 4: Compile & Run
+            // Phase 1: 20 CT (Unlock Upgrades Panel)
+            // Phase 2: Buy Auto-Scripter (40 CT)
+            // Phase 3: Accumulate 100 CT (Other upgrades available)
+            // Phase 4: Compile & Run (100 CT)
 
             // --- Intervals ---
             let autoScripterInterval;
@@ -271,7 +271,7 @@
 
             // --- Utility Functions ---
             function updateResourceDisplay() {
-                codeTokensDisplay.textContent = `💻 Code Tokens: ${Math.floor(codeTokens * 10) / 10}`; // Display decimals for bug fixes
+                codeTokensDisplay.textContent = `💻 Code Tokens: ${Math.floor(codeTokens * 10) / 10}`;
                 bugsDisplay.textContent = `🐞 Bugs: ${bugs}`;
             }
 
@@ -282,7 +282,7 @@
                 toastNotifications.appendChild(toast);
                 setTimeout(() => {
                     toast.remove();
-                }, 5000); // Toast stays for 5s as per animation
+                }, 5000);
             }
 
             function updateTaskDisplay() {
@@ -292,44 +292,52 @@
                 if (gameEnded) {
                     currentTaskTitle.innerHTML = `<div class="final-message">Hello World script compiled successfully!<br>Chapter Complete!</div>`;
                     progressBar.style.width = '100%';
-                    progressBar.style.backgroundColor = '#28a745'; // Green for complete
+                    progressBar.style.backgroundColor = '#28a745';
                     return;
                 }
 
                 switch (currentPhase) {
-                    case 1: // Get to 10 Code Tokens
-                        taskText = "Get to 10 Code Tokens";
-                        progressPercent = (codeTokens / 10) * 100;
-                        if (codeTokens >= 10) {
-                            currentPhase = 2;
-                            // Fall through to update for phase 2 immediately
-                        } else break;
-                    case 2: // Reach 20 Code Tokens (to see Upgrades)
-                        taskText = "Reach 20 Code Tokens";
+                    case 1: // Get to 20 Code Tokens (to unlock Upgrades panel)
+                        taskText = "Get to 20 Code Tokens";
                         progressPercent = (codeTokens / 20) * 100;
-                        if (codeTokens >= 20) {
+                        if (codeTokens >= 20 && !initialUpgradesUnlocked) {
                             upgradesPanel.style.display = 'flex';
-                            buyAutoScripterButton.style.display = 'block';
-                            if(!autoScripterOwned) showToast("Upgrades Panel Unlocked! Auto-Scripter available.");
-                            currentPhase = 3; // Move to phase 3 logic
-                        } else break;
-                    case 3: // Buy Auto-Scripter, then Accumulate 50 CT
-                        if (!autoScripterOwned) {
-                            taskText = "Buy Auto-Scripter (Cost: 20 💻)";
-                            progressPercent = codeTokens >= 20 ? 100 : (codeTokens / 20) * 100; // Show 100% if affordable
-                        } else {
-                            taskText = "Accumulate 50 Code Tokens";
-                            progressPercent = (codeTokens / 50) * 100;
-                            buyDebugHelperButton.style.display = 'block';
-                            buyCodeTemplatesButton.style.display = 'block';
-                            if (codeTokens >= 50) {
-                                currentPhase = 4;
-                            }
+                            buyAutoScripterButton.style.display = 'block'; // Only show this initially
+                            showToast("Upgrades Panel Unlocked! Auto-Scripter available.");
+                            initialUpgradesUnlocked = true;
+                            currentPhase = 2; // Transition to Phase 2: Buy Auto-Scripter
+                            // Fall through to update text for Phase 2 immediately
+                        } else if (codeTokens >= 20 && initialUpgradesUnlocked) { // Already unlocked, ensure phase is 2
+                             currentPhase = 2;
                         }
-                        break;
-                    case 4: // Spend 50 CT to compile
-                        taskText = "Spend 50 CT to compile and run your first script";
-                        progressPercent = codeTokens >= 50 ? 100 : (codeTokens / 50) * 100;
+                        if (currentPhase !== 2) break; // Break if not falling through to phase 2 logic
+
+                    case 2: // Buy Auto-Scripter
+                        const autoScripterCost = parseInt(buyAutoScripterButton.dataset.cost);
+                        taskText = `Buy Auto-Scripter (Cost: ${autoScripterCost} 💻)`;
+                        progressPercent = autoScripterOwned ? 100 : (codeTokens / autoScripterCost) * 100;
+                        if (autoScripterOwned) {
+                            currentPhase = 3;
+                            buyDebugHelperButton.style.display = 'block'; // Other upgrades appear
+                            buyCodeTemplatesButton.style.display = 'block';
+                            // Fall through to update text for Phase 3 immediately
+                        }
+                        if (currentPhase !== 3) break; // Break if not falling through to phase 3 logic
+                    
+                    case 3: // Accumulate 100 Code Tokens
+                        taskText = "Accumulate 100 Code Tokens";
+                        progressPercent = (codeTokens / 100) * 100;
+                        if (codeTokens >= 100) {
+                            currentPhase = 4;
+                            // Fall through to update text for Phase 4 immediately
+                        }
+                         if (currentPhase !== 4) break; // Break if not falling through to phase 4 logic
+
+                    case 4: // Spend 100 CT to compile
+                        const compileCost = parseInt(compileRunButton.dataset.cost);
+                        taskText = `Spend ${compileCost} CT to compile and run your first script`;
+                        // Progress shows how close you are to affording it, or 100% if you can
+                        progressPercent = codeTokens >= compileCost ? 100 : (codeTokens / compileCost) * 100; 
                         compileRunButton.style.display = 'block';
                         break;
                 }
@@ -343,14 +351,17 @@
 
                 const buttons = [buyAutoScripterButton, buyDebugHelperButton, buyCodeTemplatesButton, compileRunButton];
                 buttons.forEach(button => {
-                    if (!button) return;
-                    const cost = parseInt(button.dataset.cost) || (button === compileRunButton ? 50 : 0);
+                    if (!button || button.style.display === 'none') return; // Don't process hidden buttons
+                    
+                    const cost = parseInt(button.dataset.cost);
                     const canAfford = codeTokens >= cost;
                     
                     button.disabled = !canAfford;
                     if (button === buyAutoScripterButton && autoScripterOwned) button.disabled = true;
                     if (button === buyDebugHelperButton && debugHelperOwned) button.disabled = true;
                     if (button === buyCodeTemplatesButton && codeTemplatesOwned) button.disabled = true;
+                    if (button === compileRunButton && currentPhase !== 4) button.disabled = true; // Ensure compile button only active in phase 4 + affordable
+
 
                     if (canAfford && !button.disabled) {
                         button.classList.add('glow');
@@ -367,11 +378,10 @@
                 codeTokens += ctPerClick;
                 clicksForBugSpawn++;
 
-                // Button animation (simple)
                 generateCodeButton.style.transform = 'scale(0.95)';
                 setTimeout(() => { generateCodeButton.style.transform = 'scale(1)'; }, 100);
 
-                if (clicksForBugSpawn % 12 === 0) {
+                if (clicksForBugSpawn % 8 === 0) { // Bug spawns every 8th click
                     spawnBug();
                 }
 
@@ -386,7 +396,7 @@
                     bugElement.textContent = '🐞';
                     bugElement.addEventListener('click', () => fixBug(bugElement, 0.5));
                     bugArea.appendChild(bugElement);
-                    updateResourceDisplay(); // update bug count immediately
+                    updateResourceDisplay();
                 }
             }
 
@@ -397,7 +407,7 @@
                     bugs--;
                     bugElement.remove();
                     updateAllDisplays();
-                } else if (cost === 0) { // Auto-fix doesn't care about cost if it's 0
+                } else if (cost === 0) { 
                     bugs--;
                     bugElement.remove();
                     updateAllDisplays();
@@ -405,9 +415,13 @@
             }
             
             function updateAllDisplays() {
-                if (gameEnded) return;
+                if (gameEnded) { // Ensure final state is shown if game ended elsewhere
+                     updateResourceDisplay();
+                     updateTaskDisplay(); // This will show the final message
+                     return;
+                }
                 updateResourceDisplay();
-                updateTaskDisplay(); // This also calls updateUpgradeButtonsState
+                updateTaskDisplay(); 
             }
 
             // --- Upgrades Purchase ---
@@ -419,14 +433,14 @@
                     buyAutoScripterButton.disabled = true;
                     buyAutoScripterButton.classList.remove('glow');
                     buyAutoScripterButton.innerHTML += " (Owned)";
-                    showToast("Auto-Scripter purchased! (+1 💻/sec)");
+                    showToast(`Auto-Scripter purchased! (+${autoScripterRate} 💻/sec)`);
                     
                     autoScripterInterval = setInterval(() => {
                         if (gameEnded) { clearInterval(autoScripterInterval); return; }
                         codeTokens += autoScripterRate;
                         updateAllDisplays();
                     }, 1000);
-                    updateAllDisplays(); // Update immediately after purchase
+                    updateAllDisplays(); 
                 }
             });
 
@@ -445,7 +459,7 @@
                         if (bugs > 0) {
                             const firstBugElement = bugArea.querySelector('.bug-icon');
                             if (firstBugElement) {
-                                fixBug(firstBugElement, 0); // Auto-fix costs 0
+                                fixBug(firstBugElement, 0); 
                             }
                         }
                     }, 10000);
@@ -468,22 +482,24 @@
             });
 
             compileRunButton.addEventListener('click', () => {
-                const cost = 50;
+                const cost = parseInt(compileRunButton.dataset.cost);
                 if (codeTokens >= cost && currentPhase === 4 && !gameEnded) {
                     codeTokens -= cost;
                     gameEnded = true;
                     showToast("Hello World script compiled! Chapter Complete!");
                     
-                    // Disable all interactions
                     generateCodeButton.disabled = true;
-                    [buyAutoScripterButton, buyDebugHelperButton, buyCodeTemplatesButton, compileRunButton].forEach(b => b.disabled = true);
+                    [buyAutoScripterButton, buyDebugHelperButton, buyCodeTemplatesButton, compileRunButton].forEach(b => {
+                        if (b) b.disabled = true;
+                        if (b) b.classList.remove('glow');
+                    });
                     if (autoScripterInterval) clearInterval(autoScripterInterval);
                     if (debugHelperInterval) clearInterval(debugHelperInterval);
                     if (tooltipHintInterval) clearInterval(tooltipHintInterval);
                     
-                    document.getElementById('center-panel').innerHTML = ''; // Clear center panel
-                    updateAllDisplays(); // Final update for resources and task message
-                    tooltipHint.textContent = "Congratulations!";
+                    document.getElementById('center-panel').innerHTML = ''; 
+                    tooltipHint.textContent = "Congratulations! You've automated your first script!";
+                    updateAllDisplays(); // Call to show final message and resource counts
                 }
             });
 
@@ -495,25 +511,25 @@
                     "Save up Code Tokens to buy powerful upgrades.",
                     "The Auto-Scripter generates Code Tokens passively.",
                     "Code Templates make your manual clicks more effective!",
-                    "Reach 50 Code Tokens to compile your 'Hello World' script."
+                    `Reach ${compileRunButton.dataset.cost} Code Tokens to compile your 'Hello World' script.`
                 ];
                 let hintIndex = 0;
                 tooltipHintInterval = setInterval(() => {
                     if (gameEnded) { clearInterval(tooltipHintInterval); return; }
-                    if (currentPhase === 3 && !debugHelperOwned && bugs > 0) {
-                         tooltipHint.textContent = "Bugs slowing you down? Automate debugging with the Debug Helper!";
+                    if (currentPhase >= 2 && !debugHelperOwned && bugs > 0 && codeTokens >= parseInt(buyDebugHelperButton.dataset.cost)/2) { // Hint if bugs are an issue and debug helper not bought
+                         tooltipHint.textContent = "Bugs slowing you down? The Debug Helper can automate fixing them!";
                     } else {
                         tooltipHint.textContent = hints[hintIndex % hints.length];
                         hintIndex++;
                     }
-                }, 30000); // Every 30 seconds
+                }, 30000); 
             }
 
             // --- Initialization ---
             function init() {
                 updateAllDisplays();
                 showTooltipHints();
-                tooltipHint.textContent = "Welcome! Click 'Generate Code' to start."; // Initial hint
+                tooltipHint.textContent = "Welcome! Click 'Generate Code' to start."; 
             }
 
             init();
