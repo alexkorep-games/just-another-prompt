@@ -9,7 +9,7 @@ const sceneModules = import.meta.glob('./scenes/*.tsx', { eager: true }) as {
 const scenePaths = Object.keys(sceneModules).sort();
 
 function App() {
-  const [current, setCurrent] = useState<number>(0);
+  const [current, setCurrent] = useState<number>(Number(window.localStorage.getItem('currentScene')) || 0);
 
   // on mount, restore last scene index
   useEffect(() => {
