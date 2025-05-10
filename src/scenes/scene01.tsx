@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 
 //region Styled Components
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
 const SceneWrapper = styled.div`
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   padding: 20px;
@@ -11,6 +16,7 @@ const SceneWrapper = styled.div`
   color: #333;
   min-height: 100vh;
   box-sizing: border-box;
+  //position: relative; /* For absolute positioning of overlay */
 `;
 
 const Header = styled.header`
@@ -41,26 +47,33 @@ const SceneDescription = styled.p`
 const StickyNote = styled.div`
   background-color: #fffacd; /* LemonChiffon */
   padding: 15px;
-  font-family: "Comic Sans MS", "Chalkboard SE", "Marker Felt", sans-serif; /* A more handwritten feel */
+  font-family: "Comic Sans MS", "Chalkboard SE", "Marker Felt", sans-serif;
   font-size: 0.9em;
   text-align: center;
-  width: 200px;
-  height: 100px; /* Adjusted for content */
+  width: 220px; /* Adjusted for more text */
+  height: 120px; /* Adjusted for more text */
   box-shadow: 5px 5px 7px rgba(33, 33, 33, 0.7);
   transform: rotate(2deg);
   position: absolute;
   top: 20px;
   right: 20px;
   display: flex;
+  flex-direction: column; /* Stack text */
   align-items: center;
   justify-content: center;
   border: 1px solid #e0d4a4;
   z-index: 10;
 
+  p {
+    margin: 2px 0;
+  }
+
   @media (max-width: 600px) {
     position: static;
     margin: 10px auto 20px;
     transform: none;
+    width: 90%;
+    height: auto;
   }
 `;
 
@@ -72,7 +85,8 @@ const StoryMessageDisplay = styled.div`
   font-size: 1em;
   color: #1e88e5;
   border-radius: 4px;
-  min-height: 20px; /* Ensure it's visible even when empty */
+  min-height: 20px;
+  animation: ${fadeIn} 0.5s ease-out;
 `;
 
 const MainLayout = styled.div`
@@ -152,7 +166,7 @@ const Input = styled.input`
   margin: 5px 0 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  width: calc(100% - 18px); /* Adjust for padding and border */
+  width: calc(100% - 18px);
   box-sizing: border-box;
 `;
 
@@ -173,6 +187,40 @@ const UpgradeItem = styled.div`
   }
   small {
     color: #7f8c8d;
+  }
+`;
+
+const SceneCompletionOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: ${fadeIn} 0.3s ease-out;
+`;
+
+const SceneCompletionMessage = styled.div`
+  background-color: white;
+  padding: 30px 40px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  animation: ${fadeIn} 0.5s ease-out 0.2s; /* Delay animation slightly */
+  animation-fill-mode: backwards; /* Apply from state before animation starts */
+
+  h2 {
+    color: #2c3e50;
+    margin-top: 0;
+  }
+  p {
+    color: #34495e;
+    font-size: 1.1em;
+    margin-bottom: 25px;
   }
 `;
 //endregion
@@ -284,54 +332,58 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
   const [shownMessages, setShownMessages] = useState<Set<string>>(new Set());
 
   const [isCompletingTask, setIsCompletingTask] = useState<boolean>(false);
-  const [taskCooldown, setTaskCooldown] = useState<number>(0); // 10 seconds
+  const [taskCooldown, setTaskCooldown] = useState<number>(0);
   const [taskSizeInput, setTaskSizeInput] = useState<string>("50");
   const [taskDetailsForCompletion, setTaskDetailsForCompletion] = useState<{
     size: number;
   } | null>(null);
+
+  const [isSceneComplete, setIsSceneComplete] = useState<boolean>(false); // New state for scene completion
   //endregion
 
   //region Story Message Handler
   const showStoryMessage = useCallback(
     (key: keyof typeof STORY_MESSAGES, customMessage?: string) => {
-      if (!shownMessages.has(key)) {
+      if (!shownMessages.has(key) && !isSceneComplete) {
+        // Don't show new messages if scene is done
         setStoryMessage(customMessage || STORY_MESSAGES[key]);
         setShownMessages((prev) => new Set(prev).add(key));
       }
     },
-    [shownMessages]
+    [shownMessages, isSceneComplete]
   );
   //endregion
 
   //region Game Logic Effects
-  // Initial story message
   useEffect(() => {
     showStoryMessage("intro");
   }, [showStoryMessage]);
 
   // LoC generation from factories
   useEffect(() => {
-    if (locPerSecond > 0) {
+    if (locPerSecond > 0 && !isSceneComplete) {
+      // Stop generation if scene is complete
       const intervalId = setInterval(() => {
         setLoc((prevLoc) => prevLoc + locPerSecond);
       }, 1000);
       return () => clearInterval(intervalId);
     }
-  }, [locPerSecond]);
+  }, [locPerSecond, isSceneComplete]);
 
   // Task cooldown and completion
   useEffect(() => {
     let timerId: number;
-    if (isCompletingTask && taskCooldown > 0) {
+    if (isCompletingTask && taskCooldown > 0 && !isSceneComplete) {
       timerId = window.setTimeout(() => {
         setTaskCooldown((prev) => prev - 1);
       }, 1000);
     } else if (
       isCompletingTask &&
       taskCooldown === 0 &&
-      taskDetailsForCompletion
+      taskDetailsForCompletion &&
+      !isSceneComplete
     ) {
-      const currentClosedTasksCount = closedTasks; // Capture before increment
+      const currentClosedTasksCount = closedTasks;
       setClosedTasks((prev) => prev + 1);
 
       const approvalGained = (() => {
@@ -358,6 +410,7 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     taskDetailsForCompletion,
     closedTasks,
     showStoryMessage,
+    isSceneComplete,
   ]);
 
   // Story messages based on game state
@@ -378,53 +431,51 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
 
   // Scene end condition
   useEffect(() => {
-    if (bossApproval >= 100) {
+    if (bossApproval >= 100 && !isSceneComplete) {
       if (!shownMessages.has("approval100")) {
-        // Show final in-scene message
-        showStoryMessage("approval100");
+        showStoryMessage("approval100"); // Show final in-scene message
       }
-      // Then set the transition message and complete
-      // To ensure this is seen, a delay or a "continue" button would be better.
-      // For now, we'll set it and immediately call onComplete.
-      setStoryMessage(STORY_MESSAGES.sceneEnd); // This might flash briefly
-
-      // Wait a moment for the player to read the final message before transitioning
-      const transitionTimeout = setTimeout(() => {
-        onComplete();
-      }, 3000); // 3 second delay
-
-      return () => clearTimeout(transitionTimeout);
+      setIsSceneComplete(true); // Mark scene as complete
+      // The onComplete will be triggered by the button in the completion overlay
     }
-  }, [bossApproval, onComplete, showStoryMessage, shownMessages]);
+  }, [bossApproval, isSceneComplete, showStoryMessage, shownMessages]);
   //endregion
 
   //region Event Handlers
   const handleWriteCode = () => {
+    if (isSceneComplete) return;
     setLoc((prevLoc) => prevLoc + linesPerClick);
   };
 
   const handleBuyFactory = (factory: Factory) => {
-    if (loc >= factory.cost && !purchasedFactoryIds.has(factory.id)) {
-      setLoc((prevLoc) => prevLoc - factory.cost);
-      setPurchasedFactoryIds((prev) => new Set(prev).add(factory.id));
-      setLocPerSecond((prevLps) => prevLps + factory.lps);
-    }
+    if (
+      isSceneComplete ||
+      loc < factory.cost ||
+      purchasedFactoryIds.has(factory.id)
+    )
+      return;
+    setLoc((prevLoc) => prevLoc - factory.cost);
+    setPurchasedFactoryIds((prev) => new Set(prev).add(factory.id));
+    setLocPerSecond((prevLps) => prevLps + factory.lps);
   };
 
   const handleBuyClickImprovement = (improvement: ClickImprovement) => {
     if (
-      loc >= improvement.cost &&
-      !purchasedClickImprovementIds.has(improvement.id)
-    ) {
-      setLoc((prevLoc) => prevLoc - improvement.cost);
-      setPurchasedClickImprovementIds((prev) =>
-        new Set(prev).add(improvement.id)
-      );
-      setLinesPerClick((prevLpc) => prevLpc + improvement.lpcIncrease);
-    }
+      isSceneComplete ||
+      loc < improvement.cost ||
+      purchasedClickImprovementIds.has(improvement.id)
+    )
+      return;
+    setLoc((prevLoc) => prevLoc - improvement.cost);
+    setPurchasedClickImprovementIds((prev) =>
+      new Set(prev).add(improvement.id)
+    );
+    setLinesPerClick((prevLpc) => prevLpc + improvement.lpcIncrease);
   };
 
   const handleCreateTask = () => {
+    if (isSceneComplete || isCompletingTask) return;
+
     const size = parseInt(taskSizeInput, 10);
     if (isNaN(size) || size < 50 || size > 500) {
       alert("Task size must be between 50 and 500 LoC.");
@@ -434,24 +485,23 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
       alert("Not enough Lines of Code to create this task.");
       return;
     }
-    if (isCompletingTask) {
-      alert("Another task is already in progress.");
-      return;
-    }
 
     setLoc((prevLoc) => prevLoc - size);
     setTaskDetailsForCompletion({ size });
     setIsCompletingTask(true);
-    setTaskCooldown(10); // 10 seconds cooldown
+    setTaskCooldown(10);
   };
   //endregion
 
-  // Memoized values for display
   const currentLPS = useMemo(() => locPerSecond.toFixed(1), [locPerSecond]);
 
   return (
     <SceneWrapper>
-      <StickyNote>“1000 lines by Friday.”</StickyNote>
+      <StickyNote>
+        <p>Goal:</p>
+        <p>1000 lines by Friday</p>
+        <p>& 100% Boss Approval!</p>
+      </StickyNote>
       <Header>
         <h1>Chapter 1. Hello World</h1>
         <h2>Scene: The Coding Cubicle</h2>
@@ -460,10 +510,10 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
         Bob has landed a junior software developer role at a mid-sized tech
         company. The office is quiet except for the clattering of mechanical
         keyboards. Bob's desk is minimal—two monitors, a company-issued laptop,
-        and a sticky note with a short-term goal: “1000 lines by Friday.”
+        and a sticky note with a short-term goal.
       </SceneDescription>
 
-      {storyMessage && (
+      {storyMessage && !isSceneComplete && (
         <StoryMessageDisplay>{storyMessage}</StoryMessageDisplay>
       )}
 
@@ -491,7 +541,7 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
           <PanelTitle>Actions</PanelTitle>
           <Button
             onClick={handleWriteCode}
-            disabled={isCompletingTask && bossApproval >= 100}
+            disabled={isCompletingTask || isSceneComplete}
           >
             Write Code
           </Button>
@@ -506,16 +556,16 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
             min="50"
             max="500"
             step="10"
-            disabled={isCompletingTask || bossApproval >= 100}
+            disabled={isCompletingTask || isSceneComplete}
           />
           <Button
             onClick={handleCreateTask}
             disabled={
               isCompletingTask ||
+              isSceneComplete ||
               loc < Number(taskSizeInput) ||
               Number(taskSizeInput) < 50 ||
-              Number(taskSizeInput) > 500 ||
-              bossApproval >= 100
+              Number(taskSizeInput) > 500
             }
           >
             {isCompletingTask
@@ -539,7 +589,7 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
                   disabled={
                     loc < factory.cost ||
                     purchasedFactoryIds.has(factory.id) ||
-                    bossApproval >= 100
+                    isSceneComplete
                   }
                   className={
                     purchasedFactoryIds.has(factory.id) ? "purchased" : ""
@@ -564,7 +614,7 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
                   disabled={
                     loc < imp.cost ||
                     purchasedClickImprovementIds.has(imp.id) ||
-                    bossApproval >= 100
+                    isSceneComplete
                   }
                   className={
                     purchasedClickImprovementIds.has(imp.id) ? "purchased" : ""
@@ -579,6 +629,21 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
           </UpgradeCategory>
         </UpgradesPanel>
       </MainLayout>
+
+      {isSceneComplete && (
+        <SceneCompletionOverlay>
+          <SceneCompletionMessage>
+            <h2>Scene Complete!</h2>
+            <p>{STORY_MESSAGES.sceneEnd}</p>
+            <Button
+              onClick={onComplete}
+              style={{ backgroundColor: "#2ecc71", padding: "12px 25px" }}
+            >
+              Continue to Next Scene
+            </Button>
+          </SceneCompletionMessage>
+        </SceneCompletionOverlay>
+      )}
     </SceneWrapper>
   );
 };
