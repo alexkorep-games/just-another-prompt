@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import styled, { keyframes } from "styled-components";
+import styled, { keyframes, css } from "styled-components"; // Added css import
 
 //region Styled Components
 const fadeIn = keyframes`
@@ -16,7 +16,10 @@ const SceneWrapper = styled.div`
   color: #333;
   min-height: 100vh;
   box-sizing: border-box;
-  //position: relative; /* For absolute positioning of overlay */
+
+  @media (max-width: 600px) {
+    padding: 15px 10px;
+  }
 `;
 
 const Header = styled.header`
@@ -25,11 +28,18 @@ const Header = styled.header`
   h1 {
     color: #2c3e50;
     margin-bottom: 5px;
+    font-size: 2em;
+    @media (max-width: 600px) {
+      font-size: 1.8em;
+    }
   }
   h2 {
     color: #34495e;
     font-size: 1.2em;
     margin-top: 0;
+    @media (max-width: 600px) {
+      font-size: 1.1em;
+    }
   }
 `;
 
@@ -42,6 +52,9 @@ const SceneDescription = styled.p`
   padding: 10px;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  @media (max-width: 600px) {
+    font-size: 0.95em;
+  }
 `;
 
 const StickyNote = styled.div`
@@ -50,15 +63,15 @@ const StickyNote = styled.div`
   font-family: "Comic Sans MS", "Chalkboard SE", "Marker Felt", sans-serif;
   font-size: 0.9em;
   text-align: center;
-  width: 220px; /* Adjusted for more text */
-  height: 120px; /* Adjusted for more text */
+  width: 220px;
+  height: 120px;
   box-shadow: 5px 5px 7px rgba(33, 33, 33, 0.7);
   transform: rotate(2deg);
   position: absolute;
   top: 20px;
   right: 20px;
   display: flex;
-  flex-direction: column; /* Stack text */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border: 1px solid #e0d4a4;
@@ -74,6 +87,8 @@ const StickyNote = styled.div`
     transform: none;
     width: 90%;
     height: auto;
+    padding: 10px; /* Adjusted padding for mobile */
+    font-size: 0.85em; /* Slightly smaller font on mobile */
   }
 `;
 
@@ -87,12 +102,23 @@ const StoryMessageDisplay = styled.div`
   border-radius: 4px;
   min-height: 20px;
   animation: ${fadeIn} 0.5s ease-out;
+
+  @media (max-width: 600px) {
+    font-size: 0.9em;
+    padding: 12px;
+    margin: 15px 0;
+  }
 `;
 
 const MainLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+
+  @media (max-width: 767px) {
+    /* Up to the point it becomes row */
+    gap: 15px;
+  }
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -105,6 +131,10 @@ const Panel = styled.section`
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex: 1;
+
+  @media (max-width: 600px) {
+    padding: 12px;
+  }
 `;
 
 const StatsPanel = styled(Panel)``;
@@ -116,6 +146,12 @@ const PanelTitle = styled.h3`
   color: #3498db;
   border-bottom: 2px solid #ecf0f1;
   padding-bottom: 10px;
+  font-size: 1.3em;
+
+  @media (max-width: 600px) {
+    font-size: 1.15em;
+    padding-bottom: 8px;
+  }
 `;
 
 const StatItem = styled.p`
@@ -123,6 +159,10 @@ const StatItem = styled.p`
   font-size: 0.95em;
   strong {
     color: #2980b9;
+  }
+  @media (max-width: 600px) {
+    font-size: 0.9em;
+    margin: 6px 0;
   }
 `;
 
@@ -138,6 +178,10 @@ const Button = styled.button`
   transition: background-color 0.2s ease;
   width: 100%;
   box-sizing: border-box;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
 
   &:hover:not(:disabled) {
     background-color: #2980b9;
@@ -146,6 +190,12 @@ const Button = styled.button`
   &:disabled {
     background-color: #bdc3c7;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 400px) {
+    /* For very small screens */
+    font-size: 0.9em;
+    padding: 8px 12px;
   }
 `;
 
@@ -161,17 +211,51 @@ const UpgradeButton = styled(Button)`
   }
 `;
 
+const PrimaryActionButton = styled(Button)`
+  background-color: #2ecc71;
+  padding: 12px 25px;
+  font-size: 1em;
+
+  &:hover:not(:disabled) {
+    background-color: #27ae60;
+  }
+
+  @media (max-width: 600px) {
+    padding: 10px 20px;
+    font-size: 0.95em;
+  }
+  @media (max-width: 400px) {
+    padding: 8px 15px;
+    font-size: 0.9em; /* Overrides general button's 0.9em for this specific one if needed, or remove if same */
+  }
+`;
+
 const Input = styled.input`
   padding: 8px;
   margin: 5px 0 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  width: calc(100% - 18px);
+  width: 100%; /* Changed from calc */
   box-sizing: border-box;
+  font-size: 0.95em; /* Added for consistency */
+
+  @media (max-width: 600px) {
+    font-size: 0.9em;
+  }
 `;
 
 const UpgradeCategory = styled.div`
   margin-bottom: 20px;
+  h4 {
+    /* Style the h4 inside UpgradeCategory */
+    font-size: 1.1em;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+    @media (max-width: 600px) {
+      font-size: 1em;
+    }
+  }
 `;
 
 const UpgradeItem = styled.div`
@@ -187,6 +271,17 @@ const UpgradeItem = styled.div`
   }
   small {
     color: #7f8c8d;
+    font-size: 0.8em;
+  }
+
+  @media (max-width: 600px) {
+    padding: 8px;
+    p {
+      font-size: 0.85em;
+    }
+    small {
+      font-size: 0.75em;
+    }
   }
 `;
 
@@ -201,7 +296,9 @@ const SceneCompletionOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 15px; /* Add some padding for the overlay itself on small screens */
   animation: ${fadeIn} 0.3s ease-out;
+  box-sizing: border-box;
 `;
 
 const SceneCompletionMessage = styled.div`
@@ -210,17 +307,32 @@ const SceneCompletionMessage = styled.div`
   border-radius: 10px;
   text-align: center;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  animation: ${fadeIn} 0.5s ease-out 0.2s; /* Delay animation slightly */
-  animation-fill-mode: backwards; /* Apply from state before animation starts */
+  animation: ${fadeIn} 0.5s ease-out 0.2s;
+  animation-fill-mode: backwards;
+  width: 100%; /* Take available width within overlay padding */
+  max-width: 500px; /* Limit max width on larger screens */
+  box-sizing: border-box;
 
   h2 {
     color: #2c3e50;
     margin-top: 0;
+    font-size: 1.8em;
   }
   p {
     color: #34495e;
     font-size: 1.1em;
     margin-bottom: 25px;
+  }
+
+  @media (max-width: 600px) {
+    padding: 20px;
+    h2 {
+      font-size: 1.5em;
+    }
+    p {
+      font-size: 1em;
+      margin-bottom: 20px;
+    }
   }
 `;
 //endregion
@@ -338,14 +450,13 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     size: number;
   } | null>(null);
 
-  const [isSceneComplete, setIsSceneComplete] = useState<boolean>(false); // New state for scene completion
+  const [isSceneComplete, setIsSceneComplete] = useState<boolean>(false);
   //endregion
 
   //region Story Message Handler
   const showStoryMessage = useCallback(
     (key: keyof typeof STORY_MESSAGES, customMessage?: string) => {
       if (!shownMessages.has(key) && !isSceneComplete) {
-        // Don't show new messages if scene is done
         setStoryMessage(customMessage || STORY_MESSAGES[key]);
         setShownMessages((prev) => new Set(prev).add(key));
       }
@@ -359,10 +470,8 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     showStoryMessage("intro");
   }, [showStoryMessage]);
 
-  // LoC generation from factories
   useEffect(() => {
     if (locPerSecond > 0 && !isSceneComplete) {
-      // Stop generation if scene is complete
       const intervalId = setInterval(() => {
         setLoc((prevLoc) => prevLoc + locPerSecond);
       }, 1000);
@@ -370,7 +479,6 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     }
   }, [locPerSecond, isSceneComplete]);
 
-  // Task cooldown and completion
   useEffect(() => {
     let timerId: number;
     if (isCompletingTask && taskCooldown > 0 && !isSceneComplete) {
@@ -413,7 +521,6 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     isSceneComplete,
   ]);
 
-  // Story messages based on game state
   useEffect(() => {
     if (loc >= 100) showStoryMessage("loc100");
   }, [loc, showStoryMessage]);
@@ -429,14 +536,12 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
       showStoryMessage("approval50");
   }, [bossApproval, showStoryMessage]);
 
-  // Scene end condition
   useEffect(() => {
     if (bossApproval >= 100 && !isSceneComplete) {
       if (!shownMessages.has("approval100")) {
-        showStoryMessage("approval100"); // Show final in-scene message
+        showStoryMessage("approval100");
       }
-      setIsSceneComplete(true); // Mark scene as complete
-      // The onComplete will be triggered by the button in the completion overlay
+      setIsSceneComplete(true);
     }
   }, [bossApproval, isSceneComplete, showStoryMessage, shownMessages]);
   //endregion
@@ -499,7 +604,8 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
     <SceneWrapper>
       <StickyNote>
         <p>Goal:</p>
-        <p>1000 lines by Friday</p>
+        <p>1000 lines by Friday</p>{" "}
+        {/* This goal is not currently tracked in logic */}
         <p>& 100% Boss Approval!</p>
       </StickyNote>
       <Header>
@@ -572,7 +678,16 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
               ? `Completing Task (${taskCooldown}s)`
               : "Convert to Closed Task"}
           </Button>
-          <small>Cost: {taskSizeInput} LoC. Takes 10 seconds.</small>
+          <small
+            style={{
+              display: "block",
+              textAlign: "center",
+              marginTop: "5px",
+              fontSize: "0.8em",
+            }}
+          >
+            Cost: {taskSizeInput} LoC. Takes 10 seconds.
+          </small>
         </ActionsPanel>
 
         <UpgradesPanel>
@@ -635,12 +750,9 @@ const Scene01: React.FC<Scene01Props> = ({ onComplete }) => {
           <SceneCompletionMessage>
             <h2>Scene Complete!</h2>
             <p>{STORY_MESSAGES.sceneEnd}</p>
-            <Button
-              onClick={onComplete}
-              style={{ backgroundColor: "#2ecc71", padding: "12px 25px" }}
-            >
+            <PrimaryActionButton onClick={onComplete}>
               Continue to Next Scene
-            </Button>
+            </PrimaryActionButton>
           </SceneCompletionMessage>
         </SceneCompletionOverlay>
       )}
