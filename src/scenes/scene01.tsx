@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import styled, { keyframes, css } from "styled-components"; // Added css import
+import styled, { keyframes } from "styled-components"; // Added css import
 
 //region Styled Components
 const fadeIn = keyframes`
