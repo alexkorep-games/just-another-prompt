@@ -1,13 +1,12 @@
 // src/App.tsx
 import React, { useState, useEffect } from "react";
-import GlobalMenu from "./components/GlobalMenu"; // Import the new component
+import GlobalMenu from "./components/GlobalMenu"; // Assuming you have this component
+import Scene1 from "./scenes/scene01";
+import Scene2 from "./scenes/scene02";
 
-// eagerly import all scene modules
-const sceneModules = import.meta.glob("./scenes/*.tsx", { eager: true }) as {
-  [path: string]: { default: React.FC<{ onComplete: () => void }> };
-};
-// sort by filename so Scene1 → Scene2 → …
-const scenePaths = Object.keys(sceneModules).sort();
+type SceneComponentType = React.FC<{ onComplete: () => void }>;
+
+const sceneComponents: SceneComponentType[] = [Scene1, Scene2];
 
 function App() {
   const [current, setCurrent] = useState<number>(() => {
@@ -16,16 +15,16 @@ function App() {
       ? Number(savedSceneIndexString)
       : 0;
 
-    if (scenePaths.length === 0) {
+    if (sceneComponents.length === 0) {
       return 0;
     }
-    return Math.max(0, Math.min(savedSceneIndex, scenePaths.length - 1));
+    return Math.max(0, Math.min(savedSceneIndex, sceneComponents.length - 1));
   });
 
   // whenever current changes, persist it
   useEffect(() => {
     // Only save if there are scenes to prevent saving an invalid index
-    if (scenePaths.length > 0) {
+    if (sceneComponents.length > 0) {
       window.localStorage.setItem("currentScene", String(current));
     }
   }, [current]);
@@ -36,7 +35,7 @@ function App() {
 
   const handleSceneComplete = () => {
     const nextSceneIndex = current + 1;
-    if (nextSceneIndex < scenePaths.length) {
+    if (nextSceneIndex < sceneComponents.length) {
       setCurrent(nextSceneIndex);
     } else {
       alert("Congratulations! You've completed the entire game!");
@@ -46,7 +45,7 @@ function App() {
 
   const handleNextScene = () => {
     setCurrent((prevCurrent) =>
-      Math.min(prevCurrent + 1, scenePaths.length - 1)
+      Math.min(prevCurrent + 1, sceneComponents.length - 1)
     );
   };
 
@@ -55,15 +54,15 @@ function App() {
   };
 
   const isFirstScene = current === 0;
-  const isLastScene = current === scenePaths.length - 1;
-  const hasScenes = scenePaths.length > 0;
+  const isLastScene = current === sceneComponents.length - 1;
+  const hasScenes = sceneComponents.length > 0;
 
   if (!hasScenes) {
     return (
       <>
         <GlobalMenu
           onRestart={handleRestart}
-          onNextScene={handleNextScene} // Still pass them, they'll be disabled
+          onNextScene={handleNextScene}
           onPrevScene={handlePrevScene}
           isFirstScene={true}
           isLastScene={true}
@@ -78,15 +77,15 @@ function App() {
         >
           <h1>Game Error</h1>
           <p>
-            No scenes found. Please add scene files to the 'src/scenes'
-            directory.
+            No scenes found. Please ensure scenes are imported and added to the
+            'sceneComponents' array in App.tsx.
           </p>
         </div>
       </>
     );
   }
 
-  const SceneComponent = sceneModules[scenePaths[current]].default;
+  const SceneComponent = sceneComponents[current];
 
   return (
     <>
