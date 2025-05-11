@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import GlobalMenu from "./components/GlobalMenu"; // Assuming you have this component
 import Scene1 from "./scenes/scene01";
 import Scene2 from "./scenes/scene02";
+import Scene3 from "./scenes/scene03";
 
 type SceneComponentType = React.FC<{ onComplete: () => void }>;
 
-const sceneComponents: SceneComponentType[] = [Scene1, Scene2];
+const sceneComponents: SceneComponentType[] = [Scene1, Scene2, Scene3];
 
 function App() {
   const [current, setCurrent] = useState<number>(() => {
