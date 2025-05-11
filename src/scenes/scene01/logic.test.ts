@@ -1,4 +1,3 @@
-// gameLogic.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   updateGameState,
@@ -10,8 +9,7 @@ import {
   CLICK_UPGRADE_CONFIG,
   AUTOMATION_UPGRADE_CONFIG,
   TASK_SIZES,
-  // Import constants used in calculations if needed for verification
-} from "./logic"; // Assuming gameLogic.ts is in the same directory
+} from "./logic";
 
 // Helper function to apply multiple WRITE_CODE operations
 function applyClicks(initialState: GameState, numClicks: number): GameState {
@@ -424,7 +422,7 @@ describe("updateGameState", () => {
       state.bossApproval = 99;
       state.linesOfCode = TASK_SIZES.small.cost; // For +1%
       state.workMode = "Delivery";
-      let nextState = updateGameState(state, {
+      const nextState = updateGameState(state, {
         type: "COMPLETE_TASK",
         payload: { taskKey: "small" },
       });

@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useState, useEffect } from "react";
 import GlobalMenu from "./components/GlobalMenu"; // Assuming you have this component
 import Scene1 from "./scenes/scene01";
