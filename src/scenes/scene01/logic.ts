@@ -1,456 +1,469 @@
-// --- Core Types and Interfaces ---
+// =====================================================================================
+// Game Design Document Interpretation & Constants
+// =====================================================================================
 
-export interface Factory {
-  id: string;
-  name: string;
-  description: string;
+// Click Upgrade Names
+export type ClickUpgradeName =
+  | "syntaxHighlight"
+  | "codeAutocompletion"
+  | "parameterHinting";
+
+// Automation Upgrade Names
+export type AutomationUpgradeName =
+  | "textEditorPlugin"
+  | "syntaxHighlighterAutomation"
+  | "autocompleteModule"
+  | "functionParameterHelper";
+
+// Task Sizes and their properties
+export interface TaskInfo {
   cost: number;
-  locPerSec: number;
-  purchased: boolean;
+  approval: number;
 }
-
-export interface ClickImprovement {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  linesPerClickBonus: number;
-  purchased: boolean;
-}
-
-export interface TaskInProgress {
-  timeRemaining: number; // seconds
-  locCommitted: number;
-  approvalBonus: number;
-}
-
-export const FACTORY_IDS = {
-  TEXT_EDITOR_PLUGIN: "textEditorPlugin",
-  SYNTAX_HIGHLIGHTER: "syntaxHighlighterFactory", // Renamed to avoid clash with click upgrade name
-  AUTOCOMPLETE_MODULE: "autocompleteModule",
-  FUNCTION_PARAMETER_HELPER: "functionParameterHelper",
-} as const;
-export type FactoryId = (typeof FACTORY_IDS)[keyof typeof FACTORY_IDS];
-
-export const CLICK_IMPROVEMENT_IDS = {
-  SYNTAX_HIGHLIGHT_CLICK: "syntaxHighlightClick",
-  CODE_AUTOCOMPLETION_CLICK: "codeAutocompletionClick",
-  PARAMETER_HINTING_CLICK: "parameterHintingClick",
-} as const;
-export type ClickImprovementId =
-  (typeof CLICK_IMPROVEMENT_IDS)[keyof typeof CLICK_IMPROVEMENT_IDS];
-
-export interface CodingCubicleState {
-  linesOfCode: number;
-  bossApproval: number; // Percentage 0-100
-  closedTasks: number;
-  linesPerClick: number;
-
-  factories: Record<FactoryId, Factory>;
-  clickImprovements: Record<ClickImprovementId, ClickImprovement>;
-
-  taskInProgress: TaskInProgress | null;
-
-  storyMessagesLog: string[]; // A log of all unique story messages triggered, in order
-  triggeredStoryEvents: Set<string>; // Internal tracking to ensure messages fire only once
-
-  isSceneOver: boolean;
-}
-
-// --- Game Operations ---
-
-export type CodingCubicleOperation =
-  | { type: "INITIALIZE_SCENE" }
-  | { type: "WRITE_CODE" }
-  | {
-      type: "BUY_UPGRADE";
-      upgradeType: "factory" | "clickImprovement";
-      upgradeId: FactoryId | ClickImprovementId;
-    }
-  | { type: "START_CLOSE_TASK"; locToCommit: number } // locToCommit must be 50, 100, 250, or 500
-  | { type: "TIME_TICK"; deltaTimeInSeconds: number };
-
-// --- Configuration Constants ---
-
-const INITIAL_LINES_PER_CLICK = 1;
-
-const FACTORIES_CONFIG: Record<FactoryId, Omit<Factory, "purchased">> = {
-  [FACTORY_IDS.TEXT_EDITOR_PLUGIN]: {
-    id: FACTORY_IDS.TEXT_EDITOR_PLUGIN,
-    name: "Text Editor Plugin",
-    cost: 50,
-    locPerSec: 0.5,
-    description: "A lightweight plugin that remembers your last indent level.",
-  },
-  [FACTORY_IDS.SYNTAX_HIGHLIGHTER]: {
-    id: FACTORY_IDS.SYNTAX_HIGHLIGHTER,
-    name: "Syntax Highlighter",
-    cost: 100,
-    locPerSec: 1,
-    description: "Highlights code blocks to improve visibility and speed.",
-  },
-  [FACTORY_IDS.AUTOCOMPLETE_MODULE]: {
-    id: FACTORY_IDS.AUTOCOMPLETE_MODULE,
-    name: "Autocomplete Module",
-    cost: 250,
-    locPerSec: 2,
-    description: "Suggests common code completions.",
-  },
-  [FACTORY_IDS.FUNCTION_PARAMETER_HELPER]: {
-    id: FACTORY_IDS.FUNCTION_PARAMETER_HELPER,
-    name: "Function Parameter Helper",
-    cost: 500,
-    locPerSec: 4,
-    description: "Shows parameter hints inline as you type.",
-  },
+export const TASK_SIZES: Record<string, TaskInfo> = {
+  small: { cost: 50, approval: 1 }, // 50 LoC → +1% Approval
+  medium: { cost: 100, approval: 3 }, // 100 LoC → +3% Approval
+  large: { cost: 250, approval: 7 }, // 250 LoC → +7% Approval
+  xlarge: { cost: 500, approval: 15 }, // 500 LoC → +15% Approval
 };
+export type TaskSizeKey = keyof typeof TASK_SIZES;
 
-const CLICK_IMPROVEMENTS_CONFIG: Record<
-  ClickImprovementId,
-  Omit<ClickImprovement, "purchased">
+// Click Upgrade Configurations
+export const CLICK_UPGRADE_CONFIG: Record<
+  ClickUpgradeName,
+  { cost: number; locPerClickBonus: number; description: string }
 > = {
-  [CLICK_IMPROVEMENT_IDS.SYNTAX_HIGHLIGHT_CLICK]: {
-    id: CLICK_IMPROVEMENT_IDS.SYNTAX_HIGHLIGHT_CLICK,
-    name: "Syntax Highlight (Click)",
+  syntaxHighlight: {
     cost: 25,
-    linesPerClickBonus: 1,
-    description: "Syntax Highlight (lines per click: +1)",
+    locPerClickBonus: 1,
+    description: "Adds color to code",
   },
-  [CLICK_IMPROVEMENT_IDS.CODE_AUTOCOMPLETION_CLICK]: {
-    id: CLICK_IMPROVEMENT_IDS.CODE_AUTOCOMPLETION_CLICK,
-    name: "Code Autocompletion (Click)",
+  codeAutocompletion: {
     cost: 75,
-    linesPerClickBonus: 2,
-    description: "Code Autocompletion (lines per click: +2)",
+    locPerClickBonus: 2,
+    description: "Suggests common completions",
   },
-  [CLICK_IMPROVEMENT_IDS.PARAMETER_HINTING_CLICK]: {
-    id: CLICK_IMPROVEMENT_IDS.PARAMETER_HINTING_CLICK,
-    name: "Parameter Hinting (Click)",
+  parameterHinting: {
     cost: 150,
-    linesPerClickBonus: 3,
-    description: "Parameter Hinting (lines per click: +3)",
+    locPerClickBonus: 3,
+    description: "Adds inline parameter hints",
   },
 };
 
-const TASK_COMPLETION_TIME_SECONDS = 10;
-const TASK_APPROVAL_TIERS: Array<{ loc: number; approval: number }> = [
-  { loc: 50, approval: 1 },
-  { loc: 100, approval: 3 },
-  { loc: 250, approval: 7 },
-  { loc: 500, approval: 15 },
-];
-
-// --- Story Messages Constants ---
-const STORY_EVENT_INITIAL = "STORY_INITIAL";
-const STORY_EVENT_100_LOC = "STORY_100_LOC";
-const STORY_EVENT_FIRST_CLOSED_TASK = "STORY_FIRST_CLOSED_TASK";
-const STORY_EVENT_SYNTAX_HIGHLIGHTER_UNLOCKED =
-  "STORY_SYNTAX_HIGHLIGHTER_UNLOCKED";
-const STORY_EVENT_50_BOSS_APPROVAL = "STORY_50_BOSS_APPROVAL";
-const STORY_EVENT_100_BOSS_APPROVAL = "STORY_100_BOSS_APPROVAL"; // "Well done" message
-export const STORY_EVENT_SCENE_END_TRIGGER = "STORY_SCENE_END_TRIGGER"; // "Performance review" message
-
-const STORY_MESSAGES_TEXT: Record<string, string> = {
-  [STORY_EVENT_INITIAL]:
-    "Bob takes his first job as a junior developer. Time to impress the boss.",
-  [STORY_EVENT_100_LOC]:
-    "Bob’s fingers are starting to remember the keys. Momentum builds.",
-  [STORY_EVENT_FIRST_CLOSED_TASK]:
-    "Boss gives a brief nod. That felt... validating.",
-  [STORY_EVENT_SYNTAX_HIGHLIGHTER_UNLOCKED]:
-    "Colors bloom on the screen. Code is now a bit more beautiful.",
-  [STORY_EVENT_50_BOSS_APPROVAL]:
-    "Your manager sends a smiling emoji in chat. That's rare.",
-  [STORY_EVENT_100_BOSS_APPROVAL]:
-    "Well done. Bob is no longer the new guy—he's *our* guy now.",
-  [STORY_EVENT_SCENE_END_TRIGGER]:
-    "Bob’s performance review goes surprisingly well. A promotion may be on the horizon.",
+// Automation Upgrade Configurations
+export const AUTOMATION_UPGRADE_CONFIG: Record<
+  AutomationUpgradeName,
+  { cost: number; locPerSecBonus: number; description: string }
+> = {
+  textEditorPlugin: { cost: 50, locPerSecBonus: 0.5, description: "-" },
+  syntaxHighlighterAutomation: {
+    cost: 100,
+    locPerSecBonus: 1.0,
+    description: "+10% LoC/click if Highlight upgrade owned",
+  }, // Synergy handled in calc
+  autocompleteModule: {
+    cost: 250,
+    locPerSecBonus: 2.0,
+    description: "+20% passive rate if Parameter Hinting owned",
+  }, // Synergy handled in calc
+  functionParameterHelper: {
+    cost: 500,
+    locPerSecBonus: 4.0,
+    description: "+10% Boss Approval gain from tasks",
+  }, // Synergy handled in task completion
 };
 
-// --- Helper Functions ---
+// Game Mechanic Constants
+const BASE_LOC_PER_CLICK = 1;
+const FATIGUE_CLICKS_PER_POINT = 10; // 10 manual clicks = +1 Fatigue
+const FATIGUE_THRESHOLD_FOR_PENALTY = 10; // Fatigue > 10: LoC/click drops
+const FATIGUE_PENALTY_MULTIPLIER = 0.5; // Drops by 50%
+const BREAK_BY_LOC_COST = 50;
+const BREAK_BY_WAIT_DURATION_SECONDS = 10;
+const TASK_COMPLETION_COOLDOWN_SECONDS = 10;
 
-export function getInitialCodingCubicleState(): CodingCubicleState {
-  const initialFactories: Record<FactoryId, Factory> = {} as Record<
-    FactoryId,
-    Factory
-  >;
-  for (const key in FACTORIES_CONFIG) {
-    const id = key as FactoryId;
-    initialFactories[id] = { ...FACTORIES_CONFIG[id], purchased: false };
-  }
+// Work Mode Modifiers
+const FOCUS_MODE_LOC_GENERATION_MULTIPLIER = 1.5; // +50%
+const DELIVERY_MODE_LOC_GENERATION_MULTIPLIER = 0.75; // -25%
 
-  const initialClickImprovements: Record<ClickImprovementId, ClickImprovement> =
-    {} as Record<ClickImprovementId, ClickImprovement>;
-  for (const key in CLICK_IMPROVEMENTS_CONFIG) {
-    const id = key as ClickImprovementId;
-    initialClickImprovements[id] = {
-      ...CLICK_IMPROVEMENTS_CONFIG[id],
-      purchased: false,
-    };
-  }
+// Synergy Bonus Multipliers
+const SYNERGY_CLICK_HIGHLIGHT_AUTOCOMPLETE_MULTIPLIER = 1.2; // Highlight + Autocomplete (Click) → +20% LoC/click
+const SYNERGY_ALL_CLICK_UPGRADES_PASSIVE_MULTIPLIER = 1.1; // All click upgrades → +10% passive income
+const SYNERGY_AUTO_SYNTAX_CLICK_HIGHLIGHT_CLICK_MULTIPLIER = 1.1; // Syntax Highlighter (Auto) + Highlight (Click) → +10% LoC/click
+const SYNERGY_AUTO_MODULE_CLICK_PARAM_HINTING_PASSIVE_MULTIPLIER = 1.2; // Autocomplete Module (Auto) + Param Hinting (Click) → +20% passive
+const SYNERGY_AUTO_FUNC_PARAM_HELPER_APPROVAL_MULTIPLIER = 1.1; // Function Param Helper (Auto) → +10% Boss Approval gain
 
+// =====================================================================================
+// Game State Definition
+// =====================================================================================
+export interface GameState {
+  linesOfCode: number;
+  bossApproval: number; // Range: 0-100
+  fatigue: number;
+  _clicksSinceLastFatigueIncrease: number; // Internal counter for fatigue system
+
+  workMode: "Focus" | "Delivery";
+
+  upgrades: {
+    clickUpgrades: Record<ClickUpgradeName, boolean>;
+    automationUpgrades: Record<AutomationUpgradeName, boolean>;
+  };
+
+  taskCooldownRemainingSeconds: number;
+
+  isBreakTimerActive: boolean; // For "wait 10s for break"
+  breakTimerRemainingSeconds: number;
+
+  storyMessages: string[]; // Log of messages for the player
+  _gameEvents: {
+    // Flags for one-time story events
+    loc100GeneratedNotified: boolean;
+    firstTaskCompletedNotified: boolean;
+    syntaxHighlighterUnlockedNotified: boolean;
+    approval50Notified: boolean;
+    approval75Notified: boolean; // Teaser
+    approval100Notified: boolean; // Scene completion message
+    endOfSceneNotified: boolean; // "performance review" message
+  };
+
+  sceneCompleted: boolean;
+  metaBonusGranted: boolean; // For "Trusted Developer" badge
+}
+
+// =====================================================================================
+// Operations Definition
+// =====================================================================================
+export type Operation =
+  | { type: "WRITE_CODE" }
+  | { type: "BUY_CLICK_UPGRADE"; payload: { name: ClickUpgradeName } }
+  | { type: "BUY_AUTOMATION_UPGRADE"; payload: { name: AutomationUpgradeName } }
+  | { type: "COMPLETE_TASK"; payload: { taskKey: TaskSizeKey } }
+  | { type: "TOGGLE_WORK_MODE" }
+  | { type: "TAKE_BREAK_WITH_LOC" }
+  | { type: "START_WAITING_BREAK" }
+  | { type: "TICK"; payload: { deltaTimeInSeconds: number } };
+
+// =====================================================================================
+// Initial Game State
+// =====================================================================================
+export function getInitialGameState(): GameState {
   return {
     linesOfCode: 0,
     bossApproval: 0,
-    closedTasks: 0,
-    linesPerClick: INITIAL_LINES_PER_CLICK,
-    factories: initialFactories,
-    clickImprovements: initialClickImprovements,
-    taskInProgress: null,
-    storyMessagesLog: [],
-    triggeredStoryEvents: new Set<string>(),
-    isSceneOver: false,
+    fatigue: 0,
+    _clicksSinceLastFatigueIncrease: 0,
+    workMode: "Delivery", // Default to Delivery to allow tasks from start
+    upgrades: {
+      clickUpgrades: {
+        syntaxHighlight: false,
+        codeAutocompletion: false,
+        parameterHinting: false,
+      },
+      automationUpgrades: {
+        textEditorPlugin: false,
+        syntaxHighlighterAutomation: false,
+        autocompleteModule: false,
+        functionParameterHelper: false,
+      },
+    },
+    taskCooldownRemainingSeconds: 0,
+    isBreakTimerActive: false,
+    breakTimerRemainingSeconds: 0,
+    storyMessages: ["Bob takes his first job as a junior developer."],
+    _gameEvents: {
+      loc100GeneratedNotified: false,
+      firstTaskCompletedNotified: false,
+      syntaxHighlighterUnlockedNotified: false,
+      approval50Notified: false,
+      approval75Notified: false,
+      approval100Notified: false,
+      endOfSceneNotified: false,
+    },
+    sceneCompleted: false,
+    metaBonusGranted: false,
   };
 }
 
-function getApprovalForLoc(loc: number): number | undefined {
-  const tier = TASK_APPROVAL_TIERS.find((t) => t.loc === loc);
-  return tier?.approval;
+// =====================================================================================
+// Helper Functions
+// =====================================================================================
+
+// Pure deep clone for game state objects.
+function deepClone<T>(obj: T): T {
+  // Basic deep clone, sufficient for this game state structure.
+  // For more complex states with Dates, Maps, Sets, a more robust cloner would be needed.
+  return JSON.parse(JSON.stringify(obj));
 }
 
-/**
- * Checks for and applies any new story events based on the current state.
- * Returns a new state object if story events are triggered or scene status changes.
- * Otherwise, returns the same state object.
- */
-function applyStoryEventChecks(
-  stateAfterOperation: CodingCubicleState
-): CodingCubicleState {
-  let currentStoryMessagesLog = stateAfterOperation.storyMessagesLog;
-  let currentTriggeredEvents = stateAfterOperation.triggeredStoryEvents;
-  let modifiedSinceLastStoryCheck = false;
+function calculateLocPerClick(state: Readonly<GameState>): number {
+  let loc = BASE_LOC_PER_CLICK;
 
-  const triggerStoryEvent = (eventKey: string) => {
-    if (
-      !currentTriggeredEvents.has(eventKey) &&
-      STORY_MESSAGES_TEXT[eventKey]
-    ) {
-      // Important: create new arrays/sets for pure function behavior
-      currentStoryMessagesLog = [
-        ...currentStoryMessagesLog,
-        STORY_MESSAGES_TEXT[eventKey],
-      ];
-      currentTriggeredEvents = new Set(currentTriggeredEvents).add(eventKey);
-      modifiedSinceLastStoryCheck = true;
-    }
-  };
+  if (state.upgrades.clickUpgrades.syntaxHighlight)
+    loc += CLICK_UPGRADE_CONFIG.syntaxHighlight.locPerClickBonus;
+  if (state.upgrades.clickUpgrades.codeAutocompletion)
+    loc += CLICK_UPGRADE_CONFIG.codeAutocompletion.locPerClickBonus;
+  if (state.upgrades.clickUpgrades.parameterHinting)
+    loc += CLICK_UPGRADE_CONFIG.parameterHinting.locPerClickBonus;
 
-  // Check story event conditions
-  if (stateAfterOperation.closedTasks === 1) {
-    triggerStoryEvent(STORY_EVENT_FIRST_CLOSED_TASK);
-  }
-  if (stateAfterOperation.linesOfCode >= 100) {
-    triggerStoryEvent(STORY_EVENT_100_LOC);
-  }
-  // Assuming STORY_EVENT_SYNTAX_HIGHLIGHTER_UNLOCKED refers to the factory
   if (
-    stateAfterOperation.factories[FACTORY_IDS.SYNTAX_HIGHLIGHTER]?.purchased
+    state.upgrades.clickUpgrades.syntaxHighlight &&
+    state.upgrades.clickUpgrades.codeAutocompletion
   ) {
-    triggerStoryEvent(STORY_EVENT_SYNTAX_HIGHLIGHTER_UNLOCKED);
-  }
-  if (stateAfterOperation.bossApproval >= 50) {
-    triggerStoryEvent(STORY_EVENT_50_BOSS_APPROVAL);
+    loc *= SYNERGY_CLICK_HIGHLIGHT_AUTOCOMPLETE_MULTIPLIER;
   }
 
-  let newIsSceneOver = stateAfterOperation.isSceneOver;
-  if (stateAfterOperation.bossApproval >= 100) {
-    triggerStoryEvent(STORY_EVENT_100_BOSS_APPROVAL); // "Well done" message
-
-    // If "Well done" message is now active and scene isn't over yet, trigger scene end
-    if (
-      currentTriggeredEvents.has(STORY_EVENT_100_BOSS_APPROVAL) &&
-      !stateAfterOperation.isSceneOver
-    ) {
-      triggerStoryEvent(STORY_EVENT_SCENE_END_TRIGGER); // "Performance review" message
-      // If scene end message is now active, mark scene as over
-      if (currentTriggeredEvents.has(STORY_EVENT_SCENE_END_TRIGGER)) {
-        if (!newIsSceneOver) {
-          // Ensure we only set 'modified' if it actually changes
-          newIsSceneOver = true;
-          modifiedSinceLastStoryCheck = true;
-        }
-      }
-    }
+  if (
+    state.upgrades.automationUpgrades.syntaxHighlighterAutomation &&
+    state.upgrades.clickUpgrades.syntaxHighlight
+  ) {
+    loc *= SYNERGY_AUTO_SYNTAX_CLICK_HIGHLIGHT_CLICK_MULTIPLIER;
   }
 
-  if (modifiedSinceLastStoryCheck) {
-    return {
-      ...stateAfterOperation,
-      storyMessagesLog: currentStoryMessagesLog,
-      triggeredStoryEvents: currentTriggeredEvents,
-      isSceneOver: newIsSceneOver,
-    };
+  if (state.workMode === "Focus") {
+    loc *= FOCUS_MODE_LOC_GENERATION_MULTIPLIER;
+  } else if (state.workMode === "Delivery") {
+    loc *= DELIVERY_MODE_LOC_GENERATION_MULTIPLIER;
   }
-  return stateAfterOperation; // No story-related changes
+
+  if (state.fatigue > FATIGUE_THRESHOLD_FOR_PENALTY) {
+    loc *= FATIGUE_PENALTY_MULTIPLIER;
+  }
+
+  return Math.max(0, loc);
 }
 
-// --- Main Game Logic Function ---
+function calculatePassiveLocPerSecond(state: Readonly<GameState>): number {
+  let locPerSec = 0;
 
-export function processCodingCubicleScene(
-  currentState: CodingCubicleState,
-  operation: CodingCubicleOperation
-): CodingCubicleState {
-  let stateAfterOperation: CodingCubicleState;
+  if (state.upgrades.automationUpgrades.textEditorPlugin)
+    locPerSec += AUTOMATION_UPGRADE_CONFIG.textEditorPlugin.locPerSecBonus;
+  if (state.upgrades.automationUpgrades.syntaxHighlighterAutomation)
+    locPerSec +=
+      AUTOMATION_UPGRADE_CONFIG.syntaxHighlighterAutomation.locPerSecBonus;
+  if (state.upgrades.automationUpgrades.autocompleteModule)
+    locPerSec += AUTOMATION_UPGRADE_CONFIG.autocompleteModule.locPerSecBonus;
+  if (state.upgrades.automationUpgrades.functionParameterHelper)
+    locPerSec +=
+      AUTOMATION_UPGRADE_CONFIG.functionParameterHelper.locPerSecBonus;
 
-  if (operation.type === "INITIALIZE_SCENE") {
-    let initialState = getInitialCodingCubicleState();
-    // Trigger the very first story message
-    if (
-      STORY_MESSAGES_TEXT[STORY_EVENT_INITIAL] &&
-      !initialState.triggeredStoryEvents.has(STORY_EVENT_INITIAL)
-    ) {
-      initialState = {
-        ...initialState,
-        storyMessagesLog: [STORY_MESSAGES_TEXT[STORY_EVENT_INITIAL]],
-        triggeredStoryEvents: new Set<string>().add(STORY_EVENT_INITIAL),
-      };
+  if (
+    state.upgrades.automationUpgrades.autocompleteModule &&
+    state.upgrades.clickUpgrades.parameterHinting
+  ) {
+    locPerSec *= SYNERGY_AUTO_MODULE_CLICK_PARAM_HINTING_PASSIVE_MULTIPLIER;
+  }
+
+  if (
+    state.upgrades.clickUpgrades.syntaxHighlight &&
+    state.upgrades.clickUpgrades.codeAutocompletion &&
+    state.upgrades.clickUpgrades.parameterHinting
+  ) {
+    locPerSec *= SYNERGY_ALL_CLICK_UPGRADES_PASSIVE_MULTIPLIER;
+  }
+
+  if (state.workMode === "Focus") {
+    locPerSec *= FOCUS_MODE_LOC_GENERATION_MULTIPLIER;
+  } else if (state.workMode === "Delivery") {
+    locPerSec *= DELIVERY_MODE_LOC_GENERATION_MULTIPLIER;
+  }
+
+  return Math.max(0, locPerSec);
+}
+
+// This helper mutates the cloned state directly for conciseness within updateGameState.
+function _handleStoryAndCompletionTriggers(state: GameState): void {
+  if (state.linesOfCode >= 100 && !state._gameEvents.loc100GeneratedNotified) {
+    state.storyMessages.push("Bob’s fingers start to remember the keys.");
+    state._gameEvents.loc100GeneratedNotified = true;
+  }
+
+  if (state.bossApproval >= 50 && !state._gameEvents.approval50Notified) {
+    state.storyMessages.push("Manager sends a smiling emoji in chat.");
+    state._gameEvents.approval50Notified = true;
+  }
+
+  if (state.bossApproval >= 75 && !state._gameEvents.approval75Notified) {
+    state.storyMessages.push("Automation might change everything...");
+    state._gameEvents.approval75Notified = true;
+  }
+
+  if (state.bossApproval >= 100 && !state.sceneCompleted) {
+    state.sceneCompleted = true;
+    if (!state._gameEvents.approval100Notified) {
+      state.storyMessages.push(
+        "Bob is no longer the new guy—he’s our guy now."
+      );
+      state._gameEvents.approval100Notified = true;
     }
-    // This is the fully formed initial state, no further story checks needed for this op
-    return initialState;
   }
 
-  // For most operations, if scene is over, no further state changes (except TIME_TICK for task completion)
-  if (currentState.isSceneOver && operation.type !== "TIME_TICK") {
-    return currentState;
+  if (state.sceneCompleted && !state._gameEvents.endOfSceneNotified) {
+    state.storyMessages.push(
+      "Bob’s performance review goes surprisingly well."
+    );
+    state._gameEvents.endOfSceneNotified = true;
+    state.metaBonusGranted = true;
   }
+}
+
+// =====================================================================================
+// Main Game Logic Function
+// =====================================================================================
+export function updateGameState(
+  currentState: Readonly<GameState>,
+  operation: Operation
+): GameState {
+  const newState: GameState = deepClone(currentState);
+
+  // Scene completion might gate certain actions.
+  const sceneIsCompleted = newState.sceneCompleted;
 
   switch (operation.type) {
     case "WRITE_CODE": {
-      // isSceneOver check already handled above for this operation
-      stateAfterOperation = {
-        ...currentState,
-        linesOfCode: currentState.linesOfCode + currentState.linesPerClick,
-      };
-      break;
-    }
+      if (sceneIsCompleted) break;
 
-    case "BUY_UPGRADE": {
-      const { upgradeType, upgradeId } = operation;
-      if (upgradeType === "factory") {
-        const factoryToBuy = currentState.factories[upgradeId as FactoryId];
-        if (
-          factoryToBuy &&
-          !factoryToBuy.purchased &&
-          currentState.linesOfCode >= factoryToBuy.cost
-        ) {
-          const newFactories = {
-            ...currentState.factories,
-            [upgradeId]: { ...factoryToBuy, purchased: true },
-          };
-          stateAfterOperation = {
-            ...currentState,
-            linesOfCode: currentState.linesOfCode - factoryToBuy.cost,
-            factories: newFactories,
-          };
-        } else {
-          stateAfterOperation = currentState; // Cannot buy or invalid ID
-        }
-      } else {
-        // 'clickImprovement'
-        const improvToBuy =
-          currentState.clickImprovements[upgradeId as ClickImprovementId];
-        if (
-          improvToBuy &&
-          !improvToBuy.purchased &&
-          currentState.linesOfCode >= improvToBuy.cost
-        ) {
-          const newImprovements = {
-            ...currentState.clickImprovements,
-            [upgradeId]: { ...improvToBuy, purchased: true },
-          };
-          stateAfterOperation = {
-            ...currentState,
-            linesOfCode: currentState.linesOfCode - improvToBuy.cost,
-            clickImprovements: newImprovements,
-            linesPerClick:
-              currentState.linesPerClick + improvToBuy.linesPerClickBonus,
-          };
-        } else {
-          stateAfterOperation = currentState; // Cannot buy or invalid ID
-        }
-      }
-      break;
-    }
+      const locGenerated = calculateLocPerClick(newState);
+      newState.linesOfCode += locGenerated;
 
-    case "START_CLOSE_TASK": {
-      if (currentState.taskInProgress) {
-        // Already a task in progress
-        stateAfterOperation = currentState;
-        break;
-      }
-      const locCommitted = operation.locToCommit;
-      const approvalBonus = getApprovalForLoc(locCommitted);
-
+      newState._clicksSinceLastFatigueIncrease++;
       if (
-        approvalBonus === undefined ||
-        currentState.linesOfCode < locCommitted
+        newState._clicksSinceLastFatigueIncrease >= FATIGUE_CLICKS_PER_POINT
       ) {
-        stateAfterOperation = currentState; // Invalid task size or not enough LoC
-        break;
+        newState.fatigue++;
+        newState._clicksSinceLastFatigueIncrease = 0;
       }
-
-      stateAfterOperation = {
-        ...currentState,
-        linesOfCode: currentState.linesOfCode - locCommitted,
-        taskInProgress: {
-          timeRemaining: TASK_COMPLETION_TIME_SECONDS,
-          locCommitted: locCommitted,
-          approvalBonus: approvalBonus,
-        },
-      };
       break;
     }
 
-    case "TIME_TICK": {
-      let newLoc = currentState.linesOfCode;
+    case "BUY_CLICK_UPGRADE": {
+      if (sceneIsCompleted) break;
+      const { name } = operation.payload;
+      const config = CLICK_UPGRADE_CONFIG[name];
+      if (
+        !newState.upgrades.clickUpgrades[name] &&
+        newState.linesOfCode >= config.cost
+      ) {
+        newState.linesOfCode -= config.cost;
+        newState.upgrades.clickUpgrades[name] = true;
 
-      // LoC generation from factories only if scene is not over
-      if (!currentState.isSceneOver) {
-        let locFromFactoriesThisTick = 0;
-        for (const factoryKey in currentState.factories) {
-          const factory = currentState.factories[factoryKey as FactoryId];
-          if (factory.purchased) {
-            locFromFactoriesThisTick +=
-              factory.locPerSec * operation.deltaTimeInSeconds;
-          }
-        }
-        newLoc += locFromFactoriesThisTick;
-      }
-
-      let newBossApproval = currentState.bossApproval;
-      let newClosedTasks = currentState.closedTasks;
-      let newTaskInProgress = currentState.taskInProgress
-        ? { ...currentState.taskInProgress }
-        : null;
-
-      if (newTaskInProgress) {
-        newTaskInProgress.timeRemaining -= operation.deltaTimeInSeconds;
-        if (newTaskInProgress.timeRemaining <= 0) {
-          newBossApproval = Math.min(
-            100,
-            currentState.bossApproval + newTaskInProgress.approvalBonus
-          );
-          newClosedTasks = currentState.closedTasks + 1;
-          newTaskInProgress = null; // Task finished
+        if (
+          name === "syntaxHighlight" &&
+          !newState._gameEvents.syntaxHighlighterUnlockedNotified
+        ) {
+          newState.storyMessages.push("Colors bloom on the screen.");
+          newState._gameEvents.syntaxHighlighterUnlockedNotified = true;
         }
       }
-
-      stateAfterOperation = {
-        ...currentState,
-        linesOfCode: newLoc,
-        bossApproval: newBossApproval,
-        closedTasks: newClosedTasks,
-        taskInProgress: newTaskInProgress,
-      };
       break;
     }
-    default:
-      // Should be caught by TypeScript if all operation types are handled
-      stateAfterOperation = currentState;
+
+    case "BUY_AUTOMATION_UPGRADE": {
+      if (sceneIsCompleted) break;
+      const { name } = operation.payload;
+      const config = AUTOMATION_UPGRADE_CONFIG[name];
+      if (
+        !newState.upgrades.automationUpgrades[name] &&
+        newState.linesOfCode >= config.cost
+      ) {
+        newState.linesOfCode -= config.cost;
+        newState.upgrades.automationUpgrades[name] = true;
+      }
       break;
+    }
+
+    case "COMPLETE_TASK": {
+      if (sceneIsCompleted) break;
+      if (newState.workMode !== "Delivery") break;
+      if (newState.taskCooldownRemainingSeconds > 0) break;
+
+      const { taskKey } = operation.payload;
+      const taskInfo = TASK_SIZES[taskKey];
+      if (newState.linesOfCode >= taskInfo.cost) {
+        newState.linesOfCode -= taskInfo.cost;
+
+        let approvalGained = taskInfo.approval;
+        if (newState.upgrades.automationUpgrades.functionParameterHelper) {
+          approvalGained *= SYNERGY_AUTO_FUNC_PARAM_HELPER_APPROVAL_MULTIPLIER;
+        }
+
+        newState.bossApproval += approvalGained;
+        newState.taskCooldownRemainingSeconds =
+          TASK_COMPLETION_COOLDOWN_SECONDS;
+
+        if (!newState._gameEvents.firstTaskCompletedNotified) {
+          newState.storyMessages.push("Boss gives a brief nod.");
+          newState._gameEvents.firstTaskCompletedNotified = true;
+        }
+      }
+      break;
+    }
+
+    case "TOGGLE_WORK_MODE": {
+      // Allow toggle even if scene completed, effect is neutralized by other checks.
+      newState.workMode = newState.workMode === "Focus" ? "Delivery" : "Focus";
+      break;
+    }
+
+    case "TAKE_BREAK_WITH_LOC": {
+      if (sceneIsCompleted) break;
+      if (newState.linesOfCode >= BREAK_BY_LOC_COST && newState.fatigue > 0) {
+        newState.linesOfCode -= BREAK_BY_LOC_COST;
+        newState.fatigue = 0;
+        newState._clicksSinceLastFatigueIncrease = 0;
+        newState.isBreakTimerActive = false;
+        newState.breakTimerRemainingSeconds = 0;
+      }
+      break;
+    }
+
+    case "START_WAITING_BREAK": {
+      if (sceneIsCompleted) break;
+      if (newState.fatigue > 0 && !newState.isBreakTimerActive) {
+        newState.isBreakTimerActive = true;
+        newState.breakTimerRemainingSeconds = BREAK_BY_WAIT_DURATION_SECONDS;
+      }
+      break;
+    }
+
+    case "TICK": {
+      const { deltaTimeInSeconds } = operation.payload;
+
+      if (!sceneIsCompleted) {
+        const passiveLoc = calculatePassiveLocPerSecond(newState);
+        newState.linesOfCode += passiveLoc * deltaTimeInSeconds;
+      }
+
+      if (newState.taskCooldownRemainingSeconds > 0) {
+        newState.taskCooldownRemainingSeconds -= deltaTimeInSeconds;
+      }
+
+      if (newState.isBreakTimerActive) {
+        newState.breakTimerRemainingSeconds -= deltaTimeInSeconds;
+        if (newState.breakTimerRemainingSeconds <= 0) {
+          newState.fatigue = 0;
+          newState._clicksSinceLastFatigueIncrease = 0;
+          newState.isBreakTimerActive = false;
+          newState.breakTimerRemainingSeconds = 0;
+        }
+      }
+      break;
+    }
   }
 
-  // After the operation's primary effects, apply story event checks.
-  // This ensures story events are based on the *new* state.
-  return applyStoryEventChecks(stateAfterOperation);
+  // Apply global triggers and ensure values are bounded
+  _handleStoryAndCompletionTriggers(newState);
+
+  newState.linesOfCode = Math.max(0, newState.linesOfCode);
+  newState.bossApproval = Math.max(0, Math.min(100, newState.bossApproval));
+  newState.fatigue = Math.max(0, newState.fatigue);
+  newState.taskCooldownRemainingSeconds = Math.max(
+    0,
+    newState.taskCooldownRemainingSeconds
+  );
+  newState.breakTimerRemainingSeconds = Math.max(
+    0,
+    newState.breakTimerRemainingSeconds
+  );
+
+  return newState;
 }
