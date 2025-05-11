@@ -195,7 +195,7 @@ function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function calculateLocPerClick(state: Readonly<GameState>): number {
+export function calculateLocPerClick(state: Readonly<GameState>): number {
   let loc = BASE_LOC_PER_CLICK;
 
   if (state.upgrades.clickUpgrades.syntaxHighlight)
@@ -232,7 +232,7 @@ function calculateLocPerClick(state: Readonly<GameState>): number {
   return Math.max(0, loc);
 }
 
-function calculatePassiveLocPerSecond(state: Readonly<GameState>): number {
+export function calculatePassiveLocPerSecond(state: Readonly<GameState>): number {
   let locPerSec = 0;
 
   if (state.upgrades.automationUpgrades.textEditorPlugin)
